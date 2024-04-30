@@ -12,14 +12,16 @@ WorldInfo {
   basicTimeStep 16
 }
 Viewpoint {
-  orientation 0.5699384447907676 -0.5685784968233983 -0.5932020415503692 4.210309322425024
-  position 0.6613913665246925 0.19794685368541168 3.6438069774040276
+  orientation 0.584926158927646 -0.5828014875828831 -0.5640955722865841 4.165682543142846
+  position 0.38732026500525696 0.40495091623530066 3.2568732435697214
 }
 TexturedBackground {
 }
 TexturedBackgroundLight {
 }
-Robot {
+DEF EPUCK Robot {
+  translation 0 0 -3.19737e-05
+  rotation -0.0004454065324403142 -0.0004356582179772437 -0.9999998059074501 1.5929277475182777
   children [
     TouchSensor {
       translation 0 0 0.04
@@ -45,6 +47,7 @@ Robot {
     }
     HingeJoint {
       jointParameters HingeJointParameters {
+        position 99.1140386677389
         axis 0 1 0
         anchor 0 0 0.02
       }
@@ -60,8 +63,8 @@ Robot {
         }
       ]
       endPoint DEF EPUCK_LEFT_WHEEL Solid {
-        translation 0 0.026 0.02
-        rotation 0 1 0 0
+        translation 0 0.02599999999999996 0.02
+        rotation 0 -1 0 1.4169262471344877
         children [
           DEF EPUCK_WHEEL Pose {
             rotation 1 0 0 -1.570796
@@ -197,6 +200,7 @@ Robot {
     }
     HingeJoint {
       jointParameters HingeJointParameters {
+        position 94.50416172364774
         axis 0 1 0
         anchor 0 0 0.02
       }
@@ -212,8 +216,8 @@ Robot {
         }
       ]
       endPoint DEF EPUCK_RIGHT_WHEEL Solid {
-        translation 0 -0.026 0.02
-        rotation 0 1 0 0
+        translation 0 -0.02600000000000004 0.02
+        rotation 0 -1 0 6.0268031912256435
         children [
           Pose {
             rotation 1 0 0 3.14159
@@ -1096,10 +1100,11 @@ Robot {
     ]
   }
   controller "<extern>"
+  supervisor TRUE
   cpuConsumption 1.11
 }
 RectangleArena {
-  translation 0.40850000000000003 0.3585 0
+  translation 0.4085 0.358 0
   floorTileSize 0.25 0.25
   floorAppearance Parquetry {
     type "light strip"
