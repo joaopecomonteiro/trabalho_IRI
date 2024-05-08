@@ -10,7 +10,6 @@ from controller import Robot, Supervisor, GPS, Compass, Lidar, LidarPoint
 from utils import warp_robot, move_robot_to, bresenham
 from transformations import get_translation, create_tf_matrix
 
-from occupancy_grid import OccupancyGrid
 
 
 import numpy as np
@@ -18,55 +17,7 @@ import math
 import pdb
 
 import open3d as o3d
-
-
-class DeterministicOccupancyGrid(OccupancyGrid):
-    def __init__(self, origin: (float, float), dimensions: (int, int), resolution: float):
-        super().__init__(origin, dimensions, resolution)
-
-        # Initialize the grid
-        #self.occupancy_grid: np.ndarray  # TODO
-        self.occupancy_grid = np.ones(shape=self.dimensions)*0.5
-    def update_map(self, robot_tf: np.ndarray, lidar_points: [LidarPoint]) -> None:
-        # Get the grid coord for the robot pose
-        print("inside update_map")
-        #pdb.set_trace()
-        #robot_coord: (int, int)  # TODO
-        robot_coord = self.real_to_grid_coords(get_translation(robot_tf))
-
-        # Get the grid coords for the lidar points
-        grid_lidar_coords: [(int, int)] = []
-        for point in lidar_points:
-            coords = robot_tf @ np.array([point.x, point.y, 0, 1])
-            grid_point = self.real_to_grid_coords(coords)
-            grid_lidar_coords.append(grid_point)
-            bresenham_points = bresenham(robot_coord, grid_point)
-            for bre_point in bresenham_points[1:-1]:
-                self.update_cell(bre_point, False)
-            self.update_cell(grid_point, True)
-            #pass  # TODO
-        # Set as free the cell of the robot's position
-        self.update_cell(robot_coord, False)  # TODO
-
-        # Set as free the cells leading up to the lidar points
-        # TODO
-        #for point in grid_lidar_coords:
-        #    bresenham_points = bresenham(robot_coord, point)
-        #    for point in bresenham_points:
-        #        self.update_cell(point, False)
-        #    self.update_cell(point, True)
-        # Set as occupied the cells for the lidar points
-        # TODO
-
-    def update_cell(self, coords: (int, int), is_occupied: bool) -> None:
-        if self.are_grid_coords_in_bounds(coords):
-            # Update the grid cell
-            #import pdb
-            #pdb.set_trace()
-            self.occupancy_grid[coords] = int(is_occupied)  # TODO
-
-
-
+import pyransac3d as pyrsc
 
 def main() -> None:
 
@@ -97,6 +48,11 @@ def main() -> None:
     moves = [(0.10, 0.10), (0.10, 0.40), (0.10, 0.70),
              (0.40, 0.70), (0.70, 0.70),
              (0.70, 0.40), (0.70, 0.10)]
+
+    x = np.arange(0, 0.7, 0.2)
+    y = np.arange(0, 0.7, 0.2)
+    moves = [(tx, ty) for tx in x for ty in y]
+    print(f"number of moves: {len(moves)}")
     #moves = [(0.10, 0.10)]
 
     while len(moves) != 0:
@@ -119,7 +75,8 @@ def main() -> None:
 
 
         robot_tf: np.ndarray = create_tf_matrix((robot_position[0], robot_position[1], 0.0), robot_orientation)
-        data_tmp = np.array([[point.x, point.y, point.z, 1] for point in pcd if math.isfinite(point.x) and math.isfinite(point.y) and math.isfinite(point.z)])
+        data_tmp = np.array([[point.x, point.y, 0, 1] for point in pcd if math.isfinite(point.x) and math.isfinite(point.y) and math.isfinite(point.z)])
+        z_tmp = np.array([point.z for point in pcd if math.isfinite(point.x) and math.isfinite(point.y) and math.isfinite(point.z)])
         data_tmp = data_tmp.T
 
         #robot_tf[:2,:2] = 0
@@ -129,7 +86,7 @@ def main() -> None:
         tf_data = robot_tf @ data_tmp
         tf_data = tf_data.T
         tf_data = tf_data[:, :3]
-
+        tf_data[:, 2] = z_tmp
         #pdb.set_trace()
 
 
@@ -144,10 +101,39 @@ def main() -> None:
         # Visualizing the point cloud
         #o3d.visualization.draw_plotly([point_cloud])
 
+    data_arr = np.array(data)
 
 
     point_cloud = o3d.geometry.PointCloud()
-    point_cloud.points = o3d.utility.Vector3dVector(data)
+    point_cloud.points = o3d.utility.Vector3dVector(data_arr)
+    o3d.visualization.draw_plotly([point_cloud])
+
+    #cylinder = pyrsc.Cylinder()
+    #center, axis, radius, inliers = cylinder.fit(data_arr, 0.5)
+
+    cuboid = pyrsc.Cuboid()
+
+    best_eq, inliers_cuboid = cuboid.fit(data_arr, 0.0005)
+
+    print(f"number of inliers cuboid: {len(inliers_cuboid)}")
+
+
+    inliers_cuboid = data_arr[inliers_cuboid, :]
+
+
+    point_cloud = o3d.geometry.PointCloud()
+    point_cloud.points = o3d.utility.Vector3dVector(inliers_cuboid)
+    o3d.visualization.draw_plotly([point_cloud])
+
+    cylinder = pyrsc.Cylinder()
+    center, axis, radius, inliers_cylinder = cylinder.fit(inliers_cuboid, 0.0005)
+
+    print(f"number of inliers cylinder: {len(inliers_cylinder)}")
+
+    inliers_cylinder = inliers_cuboid[inliers_cylinder, :]
+
+    point_cloud = o3d.geometry.PointCloud()
+    point_cloud.points = o3d.utility.Vector3dVector(inliers_cylinder)
     o3d.visualization.draw_plotly([point_cloud])
 
 

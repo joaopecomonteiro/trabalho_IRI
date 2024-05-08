@@ -20,8 +20,6 @@ TexturedBackground {
 TexturedBackgroundLight {
 }
 DEF EPUCK Robot {
-  translation 0 0 -3.19737e-05
-  rotation -0.0004454065324403142 -0.0004356582179772437 -0.9999998059074501 1.5929277475182777
   children [
     TouchSensor {
       translation 0 0 0.04
@@ -36,7 +34,7 @@ DEF EPUCK Robot {
       translation 0 0 0.03
       horizontalResolution 100
       fieldOfView 6.28319
-      numberOfLayers 1
+      numberOfLayers 30
       near 0.04
       minRange 0.04
       maxRange 3
@@ -63,7 +61,7 @@ DEF EPUCK Robot {
         }
       ]
       endPoint DEF EPUCK_LEFT_WHEEL Solid {
-        translation 0 0.02599999999999996 0.02
+        translation 0 0.025999999999999933 0.02
         rotation 0 -1 0 1.4169262471344877
         children [
           DEF EPUCK_WHEEL Pose {
@@ -216,7 +214,7 @@ DEF EPUCK Robot {
         }
       ]
       endPoint DEF EPUCK_RIGHT_WHEEL Solid {
-        translation 0 -0.02600000000000004 0.02
+        translation 0 -0.02600000000000006 0.02
         rotation 0 -1 0 6.0268031912256435
         children [
           Pose {
