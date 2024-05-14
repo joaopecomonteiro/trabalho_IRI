@@ -56,17 +56,16 @@ def main() -> None:
 
     #x = np.arange(0, 1, 0.2)
     #pdb.set_trace()
-    x = np.repeat(np.arange(0, 1, 0.1),  8)
-    y = np.arange(0, 0.8, 0.1)
-    full_y = np.concatenate((y, y[::-1], y, y[::-1], y, y[::-1], y, y[::-1], y, y[::-1]
-                             ))
+    x = np.repeat(np.arange(0, 2, 0.1),  10)
+    y = np.arange(0, 2, 0.1)
+    full_y = np.concatenate((y, y[::-1], y, y[::-1], y, y[::-1], y, y[::-1], y, y[::-1]))
 
-    #pdb.set_trace()
     moves = [(x[i], full_y[i]) for i in range(len(x))]
     print(f"number of moves: {len(moves)}")
 
+    #pdb.set_trace()
     read = True
-    filename = "square_arena_pcd.npy"
+    filename = "point_clouds/map_w.npy"
     if read:
         #while len(moves) != 0:
         for new_position in tqdm(moves):
