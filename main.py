@@ -64,8 +64,8 @@ def main() -> None:
     print(f"number of moves: {len(moves)}")
 
     #pdb.set_trace()
-    read = True
-    filename = "point_clouds/map_w.npy"
+    read = False
+    filename = "point_clouds/square_2.npy"
     if read:
         #while len(moves) != 0:
         for new_position in tqdm(moves):
