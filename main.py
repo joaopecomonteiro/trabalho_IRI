@@ -65,8 +65,8 @@ def main() -> None:
     moves = [(x[i], full_y[i]) for i in range(len(x))]
     print(f"number of moves: {len(moves)}")
 
-    read = False
-    filename = "map_w_arena.npy"
+    read = True
+    filename = "square_arena_pcd.npy"
     if read:
         #while len(moves) != 0:
         for new_position in tqdm(moves):

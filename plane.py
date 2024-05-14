@@ -85,7 +85,7 @@ class Plane:
 
             # Select indexes where distance is biggers than the threshold
             pt_id_inliers = np.where(np.abs(dist_pt) <= thresh)[0]
-            if len(pt_id_inliers) > len(best_inliers) and  len(pt_id_inliers) > minPoints:
+            if len(pt_id_inliers) > len(best_inliers) and len(pt_id_inliers) > minPoints:
                 best_eq = plane_eq
                 best_inliers = pt_id_inliers
             self.inliers = best_inliers
