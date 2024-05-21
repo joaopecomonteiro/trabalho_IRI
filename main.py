@@ -64,7 +64,7 @@ def main() -> None:
     print(f"number of moves: {len(moves)}")
 
     #pdb.set_trace()
-    read = False
+    read = True
     filename = "point_clouds/square_2.npy"
     if read:
         #while len(moves) != 0:
@@ -136,29 +136,29 @@ def main() -> None:
         while len(inliers_plane) > 0:
             plane = Plane()
             equation, inliers_plane = plane.fit(outliers_before, 0.02, minPoints=700, maxIteration=10000, orientation=orientation)
-            inliers_plane = outliers_before[inliers_plane, :]
-            clusters = dbscan.fit_predict(inliers_plane)
-            #pdb.set_trace()
-            #clusters = kmeans.fit_predict(inliers_plane)
-
-            unique_clusters = set(clusters)
-            print(len(unique_clusters))
-            biggest_cluster_size = -1
-            biggest_cluster_points = None
-            for cluster_label in unique_clusters:
-                #print("okdawokdaw")
-                #pdb.set_trace()
-                cluster_points = inliers_plane[clusters == cluster_label]
-                if len(cluster_points) > biggest_cluster_size:
-                    #print("ok")
-                    biggest_cluster_size = len(cluster_points)
-                    biggest_cluster_points = cluster_points
-            #pdb.set_trace()
-            print(len(biggest_cluster_points), len(inliers_plane))
-            outliers_plane = np.array([point for point in tqdm(outliers_before) if point not in biggest_cluster_points])
-            outliers_full = np.array([point for point in tqdm(data_arr) if point not in biggest_cluster_points])
+            # inliers_plane = outliers_before[inliers_plane, :]
+            # clusters = dbscan.fit_predict(inliers_plane)
+            # #pdb.set_trace()
+            # #clusters = kmeans.fit_predict(inliers_plane)
+            #
+            # unique_clusters = set(clusters)
+            # print(len(unique_clusters))
+            # biggest_cluster_size = -1
+            # biggest_cluster_points = None
+            # for cluster_label in unique_clusters:
+            #     #print("okdawokdaw")
+            #     #pdb.set_trace()
+            #     cluster_points = inliers_plane[clusters == cluster_label]
+            #     if len(cluster_points) > biggest_cluster_size:
+            #         #print("ok")
+            #         biggest_cluster_size = len(cluster_points)
+            #         biggest_cluster_points = cluster_points
+            # #pdb.set_trace()
+            print(len(inliers_plane))
+            outliers_plane = np.array([point for point in tqdm(outliers_before) if point not in inliers_plane])
+            outliers_full = np.array([point for point in tqdm(data_arr) if point not in inliers_plane])
             print(f"outliers_plane.shape -> {outliers_plane.shape}")
-            print(f"inliers_plane.shape -> {biggest_cluster_points.shape}")
+            print(f"inliers_plane.shape -> {inliers_plane.shape}")
             point_cloud = o3d.geometry.PointCloud()
             point_cloud.points = o3d.utility.Vector3dVector(outliers_plane)
             o3d.visualization.draw_plotly([point_cloud])

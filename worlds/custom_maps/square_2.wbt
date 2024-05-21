@@ -13,13 +13,13 @@ WorldInfo {
 }
 Viewpoint {
   orientation 0.5699384447907678 -0.5685784968233981 -0.5932020415503693 4.210309322425022
-  position 0.934087898601355 0.3908000195127047 3.894363461526222
+  position 0.9343212573197932 0.29311890166003485 6.335338912752784
 }
 TexturedBackground {
 }
 TexturedBackgroundLight {
 }
-Robot {
+DEF EPUCK Robot {
   translation 0.1 0.1 0
   children [
     TouchSensor {
@@ -36,7 +36,7 @@ Robot {
       horizontalResolution 100
       fieldOfView 6.28319
       verticalFieldOfView 0.4
-      numberOfLayers 5
+      numberOfLayers 8
       near 0.04
       minRange 0.04
       maxRange 3

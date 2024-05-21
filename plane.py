@@ -3,6 +3,9 @@ import random
 import numpy as np
 import pdb
 
+from sklearn.cluster import DBSCAN
+
+
 class Plane:
     """
     Implementation of planar RANSAC.
@@ -33,6 +36,9 @@ class Plane:
 
         ---
         """
+
+        dbscan = DBSCAN(eps=0.1, min_samples=1)
+
         n_points = pts.shape[0]
         best_eq = []
         best_inliers = []
@@ -88,7 +94,28 @@ class Plane:
             if len(pt_id_inliers) > len(best_inliers) and len(pt_id_inliers) > minPoints:
                 best_eq = plane_eq
                 best_inliers = pt_id_inliers
+
             self.inliers = best_inliers
             self.equation = best_eq
 
+        inliers_plane = pts[self.inliers, :]
+
+        clusters = dbscan.fit_predict(inliers_plane)
+        # pdb.set_trace()
+        # clusters = kmeans.fit_predict(inliers_plane)
+
+        unique_clusters = set(clusters)
+        print(len(unique_clusters))
+        biggest_cluster_size = -1
+        biggest_cluster_points = None
+        for cluster_label in unique_clusters:
+            # print("okdawokdaw")
+            # pdb.set_trace()
+            cluster_points = inliers_plane[clusters == cluster_label]
+            if len(cluster_points) > biggest_cluster_size:
+                # print("ok")
+                biggest_cluster_size = len(cluster_points)
+                biggest_cluster_points = cluster_points
+
+        self.inliers = biggest_cluster_points
         return self.equation, self.inliers
