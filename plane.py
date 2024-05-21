@@ -99,23 +99,24 @@ class Plane:
             self.equation = best_eq
 
         inliers_plane = pts[self.inliers, :]
-
-        clusters = dbscan.fit_predict(inliers_plane)
-        # pdb.set_trace()
-        # clusters = kmeans.fit_predict(inliers_plane)
-
-        unique_clusters = set(clusters)
-        print(len(unique_clusters))
-        biggest_cluster_size = -1
-        biggest_cluster_points = None
-        for cluster_label in unique_clusters:
-            # print("okdawokdaw")
+        if len(inliers_plane) > 0:
+            clusters = dbscan.fit_predict(inliers_plane)
             # pdb.set_trace()
-            cluster_points = inliers_plane[clusters == cluster_label]
-            if len(cluster_points) > biggest_cluster_size:
-                # print("ok")
-                biggest_cluster_size = len(cluster_points)
-                biggest_cluster_points = cluster_points
+            # clusters = kmeans.fit_predict(inliers_plane)
 
-        self.inliers = biggest_cluster_points
+            unique_clusters = set(clusters)
+            print(len(unique_clusters))
+            biggest_cluster_size = -1
+            biggest_cluster_points = None
+            for cluster_label in unique_clusters:
+                # print("okdawokdaw")
+                # pdb.set_trace()
+                cluster_points = inliers_plane[clusters == cluster_label]
+                if len(cluster_points) > biggest_cluster_size:
+                    # print("ok")
+                    biggest_cluster_size = len(cluster_points)
+                    biggest_cluster_points = cluster_points
+            inliers_plane = biggest_cluster_points
+
+        self.inliers = inliers_plane
         return self.equation, self.inliers
