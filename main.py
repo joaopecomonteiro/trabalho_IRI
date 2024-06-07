@@ -164,16 +164,11 @@ def main() -> None:
         while len(inliers_plane) > 0:
             plane = Plane()
             equation, inliers_plane = plane.fit(outliers_before, 0.02, minPoints=300, maxIteration=10000, orientation=orientation)
-            #print(len(inliers_plane))
+
             if len(inliers_plane) <= 0:
                 break
             outliers_plane = np.array([point for point in tqdm(outliers_before) if point not in inliers_plane])
             outliers_full = np.array([point for point in tqdm(data_arr) if point not in inliers_plane])
-            #print(f"outliers_plane.shape -> {outliers_plane.shape}")
-            #print(f"inliers_plane.shape -> {inliers_plane.shape}")
-            #point_cloud = o3d.geometry.PointCloud()
-            #point_cloud.points = o3d.utility.Vector3dVector(outliers_plane)
-            #o3d.visualization.draw_plotly([point_cloud])
 
             outliers_before = outliers_plane
 
@@ -231,8 +226,6 @@ def main() -> None:
 
     matrix = np.zeros((330, 330))
 
-
-
     from skimage.draw import line
 
     for edge in intersection_edges:
@@ -250,10 +243,9 @@ def main() -> None:
     plt.imshow(np.rot90(matrix))
     plt.show()
 
-    with open(shapes_filename, 'rb') as f:
-        gt_shapes = pickle.load(f)
+    #with open(shapes_filename, 'rb') as f:
+    #    gt_shapes = pickle.load(f)
 
-    breakpoint()
 
 if __name__ == '__main__':
     main()
