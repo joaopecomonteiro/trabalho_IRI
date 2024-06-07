@@ -6,10 +6,11 @@ import yaml
 from PIL import Image
 import numpy as np
 import csv
+from tqdm import tqdm
 
 if __name__ == '__main__':
     custom_maps_filepath: str = './worlds/custom_maps/'
-    map_name: str = 'walls'
+    map_name: str = 'map_test_9'
 
     # Parse the YAML file
     yaml_filepath: str = custom_maps_filepath + map_name + '_config.yaml'
@@ -27,9 +28,10 @@ if __name__ == '__main__':
     img: Image = Image.open(custom_maps_filepath + image_filename).convert('L')
 
     np_img: np.array = np.array(img)
+    #breakpoint()
     height: int = len(np_img)
     width: int = len(np_img[0])
-    for row in range(len(np_img)):
+    for row in tqdm(range(len(np_img))):
         for col in range(len(np_img[row])):
             if np_img[row][col] <= max_pixel_value_for_wall:
                 wall_pixels_coords.append((origin[0] + resolution*col, origin[1] + resolution*(height - row)))

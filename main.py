@@ -64,6 +64,61 @@ def find_squares(edges):
 
     return squares
 
+
+
+
+
+
+
+def find_all_cycles(graph):
+    def dfs_cycle(start, current, visited, stack, cycles):
+        visited[current] = True
+        stack.append(current)
+
+        for neighbor in graph.neighbors(current):
+            if not visited[neighbor]:
+                dfs_cycle(start, neighbor, visited, stack, cycles)
+            elif neighbor == start and len(stack) > 2:
+                cycle = stack[:] + [start]
+                cycles.append(cycle)
+
+        stack.pop()
+        visited[current] = False
+
+    cycles = []
+    for node in graph.nodes():
+        visited = {n: False for n in graph.nodes()}
+        dfs_cycle(node, node, visited, [], cycles)
+
+    # Remove duplicate cycles (considering rotations and reversed versions)
+    unique_cycles = []
+    for cycle in cycles:
+        cycle = cycle[:-1]  # Remove the duplicate start/end node
+        normalized_cycle = tuple(sorted(cycle))
+        if normalized_cycle not in unique_cycles:
+            unique_cycles.append(normalized_cycle)
+
+    return [list(cycle) for cycle in unique_cycles]
+
+def find_cycles(edges):
+    # Create the graph
+    G = nx.Graph()
+    G.add_edges_from(edges)
+
+    # Find all cycles in the graph
+    cycles = find_all_cycles(G)
+
+    return cycles
+
+
+
+
+
+
+
+
+
+
 def plane_intersect(a, b):
     """
     a, b   4-tuples/lists
@@ -121,16 +176,19 @@ def main() -> None:
 
     #x = np.arange(0, 1, 0.2)
     #pdb.set_trace()
-    x = np.repeat(np.arange(0, 2, 0.1),  10)
-    y = np.arange(0, 2, 0.1)
-    full_y = np.concatenate((y, y[::-1], y, y[::-1], y, y[::-1], y, y[::-1], y, y[::-1]))
+    x = np.repeat(np.arange(0.1, 5.3, 0.2),  25)
+    y = np.arange(0.1, 5.3, 0.2)
+    full_y = np.concatenate((y, y[::-1], y, y[::-1], y, y[::-1], y, y[::-1], y, y[::-1],
+                             y, y[::-1], y, y[::-1], y, y[::-1], y, y[::-1], y, y[::-1],
+                             y, y[::-1], y, y[::-1], y, y[::-1]
+                             ))
 
     moves = [(x[i], full_y[i]) for i in range(len(x))]
     print(f"number of moves: {len(moves)}")
-
+    #breakpoint()
     #pdb.set_trace()
     read = False
-    filename = "point_clouds/square_2.npy"
+    filename = "point_clouds/random_map5.npy"
     if read:
         #while len(moves) != 0:
         for new_position in tqdm(moves):
@@ -140,8 +198,8 @@ def main() -> None:
             #                                robot_position[1] + step_distance)
             #new_position = moves.pop(0)
             print(new_position)
-            move_robot_to(supervisor, robot_position, robot_orientation, new_position, 0.1, math.pi)
-
+            #warp_robot(supervisor, robot_position, robot_orientation, new_position, 0.1, math.pi)
+            warp_robot(supervisor, "EPUCK", new_position)
             gps_readings = gps.getValues()
             robot_position = (gps_readings[0], gps_readings[1])
             compass_readings = compass.getValues()
@@ -190,7 +248,7 @@ def main() -> None:
         inliers_plane = [0, 0, 0]
         while len(inliers_plane) > 0:
             plane = Plane()
-            equation, inliers_plane = plane.fit(outliers_before, 0.02, minPoints=700, maxIteration=10000, orientation=orientation)
+            equation, inliers_plane = plane.fit(outliers_before, 0.02, minPoints=300, maxIteration=10000, orientation=orientation)
             print(len(inliers_plane))
             if len(inliers_plane) <= 0:
                 break
@@ -221,12 +279,12 @@ def main() -> None:
                 x, y = point_a[0], point_a[1]
                 for point in plane_a[1]:
                     x2, y2 = point[0], point[1]
-                    if np.sqrt((x-x2)**2 + (y-y2)**2) < 0.2:
+                    if np.sqrt((x-x2)**2 + (y-y2)**2) < 0.1:
                         read += 1
                         break
                 for point in plane_b[1]:
                     x2, y2 = point[0], point[1]
-                    if np.sqrt((x - x2) ** 2 + (y - y2) ** 2) < 0.2:
+                    if np.sqrt((x - x2) ** 2 + (y - y2) ** 2) < 0.1:
                         read += 1
                         break
                 if read == 2:
@@ -234,21 +292,59 @@ def main() -> None:
                     intersection_point = np.array([x, y, z])
                     intersection_points.append(intersection_point)
                     intersection_edges.append((a, b))
-                    intersection_edges.append((b, a))
+                    #intersection_edges.append((b, a))
 
+    edges = []
+    for plane_idx, plane in enumerate(planes):
 
+        plane_eq = plane[0]
+        edge_points = []
+        for point_idx, point in enumerate(intersection_points):
+            #breakpoint()
+            dist = (plane_eq[0] * point[0] + plane_eq[1] * point[1] + plane_eq[2] * point[2] + plane_eq[3]) / np.sqrt(plane_eq[0] ** 2 + plane_eq[1] ** 2 + plane_eq[2] ** 2)
+            print(plane_idx, point_idx, dist)
+            if np.abs(dist) <= 0.0001:
+                edge_points.append(point_idx)
+        if len(edge_points) == 2:
+            edges.append(edge_points)
     intersection_points = np.array(intersection_points)
 
-    squares = find_squares(intersection_edges)
+    intersection_edges = edges
+    #breakpoint()
 
-    matrix = np.zeros((2000, 2000))
-    matrix[0][0] = 1
-    matrix[-1][0] = 1
-    matrix[0][-1] = 1
-    matrix[-1][-1] = 1
+    shapes = find_cycles(intersection_edges)
+
+    matrix = np.zeros((530, 530))
 
 
-    breakpoint()
+        # breakpoint()
+    from skimage.draw import line
+
+    for edge in intersection_edges:
+        point_a = np.round(intersection_points[edge[0]]*100).astype(int) + 15
+        point_b = np.round(intersection_points[edge[1]]*100).astype(int) + 15
+        #point_a = intersection_points[edge[0]]
+        #point_b = intersection_points[edge[1]]
+        #breakpoint()
+        rr, cc = line(point_a[0], point_a[1], point_b[0], point_b[1])
+        matrix[rr, cc] = 1
+    for point in intersection_points:
+        point = np.round(point*100).astype(int) + 15
+        matrix[point[0], point[1]] = 2
+    #for shape in shapes:
+    #    points = np.round(intersection_points[shape]*100).astype(int) + 10
+    #    print(points)
+    #    for point in points:
+    #        matrix[point[0], point[1]] = 2
+    #breakpoint()
+
+    #matrix[0][0] = 1
+    #matrix[-1][0] = 1
+    #matrix[0][-1] = 1
+    #matrix[-1][-1] = 1
+    import matplotlib.pyplot as plt
+    plt.imshow(np.rot90(matrix))
+    plt.show()
 
 
 if __name__ == '__main__':
