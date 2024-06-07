@@ -38,6 +38,7 @@ def draw_triangle(matrix, mask, shapes, top_left, size):
     height = int((np.sqrt(3)/2) * size)  # Height of the equilateral triangle
     if y-height < 100 or x+size > matrix.shape[0]-100 or x < 100:
         matrix += 1000
+
     cv2.line(matrix, (x, y), (x+size, y), color=(255, 255, 255), thickness=10)
     cv2.line(matrix, (x, y), (int(x+size/2), y-height), color=(255, 255, 255), thickness=10)
     cv2.line(matrix, (x+size, y), (int(x+size/2), y-height), color=(255, 255, 255), thickness=10)
