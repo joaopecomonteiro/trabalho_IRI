@@ -105,7 +105,7 @@ class Plane:
             # clusters = kmeans.fit_predict(inliers_plane)
 
             unique_clusters = set(clusters)
-            print(len(unique_clusters))
+            #print(len(unique_clusters))
             biggest_cluster_size = -1
             biggest_cluster_points = None
             for cluster_label in unique_clusters:
