@@ -59,10 +59,11 @@ def main() -> None:
     #breakpoint()
     i = 4
 
-    filename = f"point_clouds/map_test_{i}.npy"
-
+    #filename = f"point_clouds/map_test_{i}.npy"
+    filename = f"point_clouds/zzzmap_test_2.npy"
     #mask = np.zeros((3000, 3000))
-    with open(f'worlds/custom_maps/map_test_{i}_mask.pkl', 'rb') as f:
+    #with open(f'worlds/custom_maps/map_test_{i}_mask.pkl', 'rb') as f:
+    with open(f'worlds/custom_maps/zzzmap_test_2_mask.pkl', 'rb') as f:
         mask = pickle.load(f)
 
 

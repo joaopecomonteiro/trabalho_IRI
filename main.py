@@ -144,8 +144,8 @@ def plane_intersect(a, b):
 
 def main() -> None:
 
-    pcd_filename = "point_clouds/map_test_1.npy"
-    shapes_filename = "worlds/custom_maps/map_test_1_shapes.pkl"
+    pcd_filename = "point_clouds/zzzmap_test_2.npy"
+    shapes_filename = "worlds/custom_maps/zzzmap_test_2_shapes.pkl"
 
     data_arr = np.load(pcd_filename)
     data_arr = data_arr[data_arr[:, -1] >= -0.02]
@@ -179,6 +179,7 @@ def main() -> None:
     #point_a, point_b = plane_intersect(planes[0][0], planes[1][0])
     # for a, plane_a in enumerate(planes):
     #     for b, plane_b in enumerate(planes):
+    #breakpoint()
     for a in range(len(planes)):
         for b in range(a, len(planes)):
             read = 0
