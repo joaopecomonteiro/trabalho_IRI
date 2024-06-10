@@ -7,6 +7,8 @@ from skimage.draw import line
 import cv2
 import pickle
 import yaml
+import csv
+import os
 
 shapes = []
 
@@ -280,8 +282,16 @@ def display_matrix(matrix):
     plt.imshow(matrix, cmap='Greys', interpolation='nearest', origin='lower')
     plt.show()
 
-
-
+#Funtion to save the shapes to a csv file (ground truth)
+def save_shapes_to_csv(shapes, filename):
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    with open(filename, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(["Shape", "Vertices", "Angle", "Center"])  # Write the header
+        for shape in shapes:
+            shape_type, polygon, angle, center = shape
+            vertices_str = ";".join([f"({x},{y})" for x, y in polygon])
+            writer.writerow([shape_type, vertices_str, angle, center])
 
 if __name__ == "__main__":
     for i in range(4,5):
@@ -304,6 +314,8 @@ if __name__ == "__main__":
 
         with open(f'worlds/custom_maps/zzzmap_test_{i}_shapes.pkl', 'wb') as f:
             pickle.dump(shapes, f)
+
+        save_shapes_to_csv(shapes, f'ground_truth/zzzmap_test_{i}_shapes.csv')
         #breakpoint()
 
         yaml_data = {
