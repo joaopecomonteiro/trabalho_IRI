@@ -319,7 +319,7 @@ if __name__ == "__main__":
         #breakpoint()
 
         yaml_data = {
-            'image': f'this_map_test_{i}_image.png',
+            'image': f'zzzmap_test_{i}_image.png',
             'resolution': 0.001,
             'origin': [0.0, 0.0, 0.0],
             'occupied_thresh': 0.65,
