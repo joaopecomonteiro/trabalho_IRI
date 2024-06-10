@@ -6,13 +6,14 @@ import math
 from skimage.draw import line
 import cv2
 import pickle
+import yaml
 
 shapes = []
 
 angles_dict = {
-    'draw_triangle': [0, 60],
-    'draw_square': [0, 45],
-    'draw_pentagon': [0, 36]
+    'draw_triangle': [-60, 60],
+    'draw_square': [-45, 45],
+    'draw_pentagon': [-36, 36]
 }
 # Function to draw a square on the matrix
 
@@ -242,7 +243,6 @@ def place_shape(matrix, mask, shapes, shape_fn, size,angle=0):
         x = random.randint(0, matrix.shape[0]-1)
         y = random.randint(0, matrix.shape[1]-1)
 
-
         if can_place(matrix, mask, shape_fn, (x, y), size, angle):
             shapes = shape_fn(matrix, mask, shapes,(x, y), size,angle)
             # print the shape characteristics
@@ -259,10 +259,10 @@ def generate_matrix():
 
     shapes = []
 
-    num_shapes = random.randint(4, 5)
+    num_shapes = random.randint(3, 5)
     #num_shapes = 1
     print(num_shapes)
-    shape_functions = [draw_square, draw_triangle, draw_pentagon]
+    shape_functions = [draw_square,draw_triangle,draw_pentagon]
     shape_sizes = [random.randint(400, 900) for _ in range(num_shapes)]  # Example size range
     #breakpoint()
     for size in shape_sizes:
@@ -277,13 +277,14 @@ def generate_matrix():
 
 # Function to display the matrix using matplotlib
 def display_matrix(matrix):
-    plt.imshow(matrix, cmap='Greys', interpolation='nearest')
+    plt.imshow(matrix, cmap='Greys', interpolation='nearest', origin='lower')
     plt.show()
 
 
 
+
 if __name__ == "__main__":
-    for i in range(3,4):
+    for i in range(4,5):
         matrix, mask, shapes = generate_matrix()
         #breakpoint()
 
@@ -296,7 +297,7 @@ if __name__ == "__main__":
         #cv2.imshow('image', mask)
         #cv2.waitKey(0)
 
-        plt.imsave(f'worlds/custom_maps/zzzmap_test_{i}_image.png', new_matrix, cmap='gray')
+        plt.imsave(f'worlds/custom_maps/zzzmap_test_{i}_image.png', new_matrix, cmap='gray', origin='lower')
 
         with open(f'worlds/custom_maps/zzzmap_test_{i}_mask.pkl', 'wb') as f:
             pickle.dump(mask, f)
@@ -304,6 +305,17 @@ if __name__ == "__main__":
         with open(f'worlds/custom_maps/zzzmap_test_{i}_shapes.pkl', 'wb') as f:
             pickle.dump(shapes, f)
         #breakpoint()
+
+        yaml_data = {
+            'image': f'this_map_test_{i}_image.png',
+            'resolution': 0.001,
+            'origin': [0.0, 0.0, 0.0],
+            'occupied_thresh': 0.65,
+        }
+
+        yaml_filename = f'worlds/custom_maps/zzzmap_test_{i}_config.yaml'
+        with open(yaml_filename, 'w') as yaml_file:
+            yaml.dump(yaml_data, yaml_file)
     #import skimage
 
 

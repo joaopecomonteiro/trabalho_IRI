@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 if __name__ == '__main__':
     custom_maps_filepath: str = './worlds/custom_maps/'
-    map_name: str = 'zzzmap_test_3'
+    map_name: str = 'zzzmap_test_4'
 
     # Parse the YAML file
     yaml_filepath: str = custom_maps_filepath + map_name + '_config.yaml'

@@ -48,8 +48,8 @@ def main() -> None:
 
     data = []
 
-    x = np.repeat(np.arange(0.1, 5.1, 0.2), 25)
-    y = np.arange(0.1, 5.1, 0.2)
+    x = np.repeat(np.arange(0.1, 5, 0.15), 25)
+    y = np.arange(0.1, 5, 0.15)
 
     # Calculate the necessary number of repeats for full_y
     num_repeats = (len(x) // len(y)) + 1
@@ -65,10 +65,10 @@ def main() -> None:
     i = 4
 
     #filename = f"point_clouds/map_test_{i}.npy"
-    filename = f"point_clouds/zzzmap_test_3.npy"
+    filename = f"point_clouds/zzzmap_test_41.npy"
     #mask = np.zeros((3000, 3000))
     #with open(f'worlds/custom_maps/map_test_{i}_mask.pkl', 'rb') as f:
-    with open(f'worlds/custom_maps/zzzmap_test_3_mask.pkl', 'rb') as f:
+    with open(f'worlds/custom_maps/zzzmap_test_4_mask.pkl', 'rb') as f:
         mask = pickle.load(f)
 
 
