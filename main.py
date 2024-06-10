@@ -144,8 +144,8 @@ def plane_intersect(a, b):
 
 def main() -> None:
 
-    pcd_filename = "point_clouds/zzzmap_test_2.npy"
-    shapes_filename = "worlds/custom_maps/zzzmap_test_2_shapes.pkl"
+    pcd_filename = "point_clouds/zzzmap_test_3.npy"
+    shapes_filename = "worlds/custom_maps/zzzmap_test_3_shapes.pkl"
 
     data_arr = np.load(pcd_filename)
     data_arr = data_arr[data_arr[:, -1] >= -0.02]
@@ -225,7 +225,7 @@ def main() -> None:
 
     shapes = find_cycles(intersection_edges)
 
-    matrix = np.zeros((330, 330))
+    matrix = np.zeros((530, 530))
 
     from skimage.draw import line
 
@@ -250,7 +250,6 @@ def main() -> None:
 
 if __name__ == '__main__':
     main()
-
 
 
 

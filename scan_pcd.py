@@ -48,22 +48,27 @@ def main() -> None:
 
     data = []
 
-    x = np.repeat(np.arange(0.1, 3.1, 0.2),  15)
-    y = np.arange(0.1, 3.1, 0.2)
+    x = np.repeat(np.arange(0.1, 5.1, 0.2), 25)
+    y = np.arange(0.1, 5.1, 0.2)
 
-    full_y = np.concatenate((y, y[::-1], y, y[::-1], y, y[::-1], y, y[::-1], y, y[::-1],
-                             y, y[::-1], y, y[::-1], y
-                             ))
+    # Calculate the necessary number of repeats for full_y
+    num_repeats = (len(x) // len(y)) + 1
+
+    # Create full_y by repeating the pattern enough times and then slicing to the correct length
+    full_y = np.tile(np.concatenate((y, y[::-1])), num_repeats)[:len(x)]
+
+    # Now full_y has the same length as x
     moves = [(x[i], full_y[i]) for i in range(len(x))]
+
     print(f"number of moves: {len(moves)}")
     #breakpoint()
     i = 4
 
     #filename = f"point_clouds/map_test_{i}.npy"
-    filename = f"point_clouds/zzzmap_test_2.npy"
+    filename = f"point_clouds/zzzmap_test_3.npy"
     #mask = np.zeros((3000, 3000))
     #with open(f'worlds/custom_maps/map_test_{i}_mask.pkl', 'rb') as f:
-    with open(f'worlds/custom_maps/zzzmap_test_2_mask.pkl', 'rb') as f:
+    with open(f'worlds/custom_maps/zzzmap_test_3_mask.pkl', 'rb') as f:
         mask = pickle.load(f)
 
 
