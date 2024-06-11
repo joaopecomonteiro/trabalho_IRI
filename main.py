@@ -68,7 +68,6 @@ def find_squares(edges):
 
 
 
-
 def find_all_cycles(graph):
     def dfs_cycle(start, current, visited, stack, cycles):
         visited[current] = True
@@ -99,6 +98,7 @@ def find_all_cycles(graph):
 
     return [list(cycle) for cycle in unique_cycles]
 
+
 def find_cycles(edges):
     # Create the graph
     G = nx.Graph()
@@ -109,11 +109,13 @@ def find_cycles(edges):
 
     return cycles
 
+
 angles_dict = {
     'draw_triangle': 120,
     'draw_square': 90,
     'draw_pentagon': 72
 }
+
 
 def sort_vertices_by_angle(vertices, centroid):
     centroid_x, centroid_y = centroid
@@ -121,9 +123,26 @@ def sort_vertices_by_angle(vertices, centroid):
     return sorted_vertices
 
 
+def is_cycle(vertices):
+    G = nx.Graph()
+    num_vertices = len(vertices)
+    for i in range(num_vertices):
+        G.add_edge(tuple(vertices[i]), tuple(vertices[(i + 1) % num_vertices]))
+    if len(list(nx.cycle_basis(G))) == 1 and all(len(list(G.neighbors(node))) == 2 for node in G.nodes):
+        return True
+    return False
+
+
 def classify_shape(vertices, centroid):
     num_vertices = len(vertices)
+
     sorted_vertices = sort_vertices_by_angle(vertices, centroid)
+
+    if num_vertices == 2:
+        return "Plane"
+
+    if not is_cycle(vertices):
+        return f"Unknown with {num_vertices} vertices"
 
     if num_vertices == 3:
         side_lengths = []
@@ -135,7 +154,7 @@ def classify_shape(vertices, centroid):
         if all(abs(length - side_lengths[0]) < 0.1 for length in side_lengths):
             return "Regular Triangle"
         else:
-            return "Not Regular Triangle"
+            return "Triangle"
 
     elif num_vertices == 4:
         side_lengths = []
@@ -150,7 +169,7 @@ def classify_shape(vertices, centroid):
               abs(side_lengths[1] - side_lengths[3]) < 0.1):
             return "Rectangle"
         else:
-            return "Primitive with 4 sides"
+            return "Polygon with 4 vertices"
 
     elif num_vertices == 5:
         side_lengths = []
@@ -160,12 +179,12 @@ def classify_shape(vertices, centroid):
             side_length = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
             side_lengths.append(side_length)
         if all(abs(length - side_lengths[0]) < 0.1 for length in side_lengths):
-            return "Regular Pentagon"
+            return "Pentagon"
         else:
-            return "Not Regular Pentagon"
+            return "Polygon with 5 vertices"
 
     else:
-        return "Can't Identify Primitive"
+        return f"Polygon with {num_vertices} vertices"
 
 
 def calculate_rotation_angle(rotated_vertices, type_shape):
@@ -183,9 +202,11 @@ def calculate_rotation_angle(rotated_vertices, type_shape):
 
     return rotation_angle
 
+
 def parse_vertices(vertices_str):
     vertices = vertices_str.replace("(", "").replace(")", "").split(";")
     return [tuple(map(int, v.split(","))) for v in vertices]
+
 
 def plane_intersect(a, b):
     """
@@ -200,7 +221,7 @@ def plane_intersect(a, b):
     aXb_vec = np.cross(a_vec, b_vec)
 
     A = np.array([a_vec, b_vec, aXb_vec])
-    d = np.array([-a[3], -b[3], 0.]).reshape(3,1)
+    d = np.array([-a[3], -b[3], 0.]).reshape(3, 1)
 
     # could add np.linalg.det(A) == 0 test to prevent linalg.solve throwing error
 
@@ -211,7 +232,7 @@ def plane_intersect(a, b):
 
 def main() -> None:
     pcd_filename = "point_clouds/zmap_test_4_ana.npy"
-    shapes_filename = "worlds/custom_maps/zmap_test_4_shapes.pkl"
+    #shapes_filename = "worlds/custom_maps/zmap_test_4_shapes.pkl"
     csv_points = "worlds/custom_maps/zmap_test_4_points.csv"
     output_csv = "results/comparison_results_zmap_test_4.csv"
     ground_truths = pd.read_csv("ground_truth/zmap_test_4_shapes.csv")
@@ -230,7 +251,7 @@ def main() -> None:
     inliers_all = []
     outliers_before = data_arr
     for orientation in ["vertical"]:
-        print(orientation)
+        #print(orientation)
         inliers_plane = [0, 0, 0]
         while len(inliers_plane) > 0:
             plane = Plane()
@@ -308,11 +329,11 @@ def main() -> None:
         classification = classify_shape(flat_points, center[:2])
 
         shape_key = ''
-        if classification == "Regular Triangle" or classification == "Not Regular Triangle":
+        if classification == "Triangle":
             shape_key = 'draw_triangle'
         elif classification == "Square" or classification == "Rectangle":
             shape_key = 'draw_square'
-        elif classification == "Regular Pentagon" or classification == "Not Regular Pentagon":
+        elif classification == "Regular Pentagon":
             shape_key = 'draw_pentagon'
 
         if shape_key:
@@ -381,7 +402,6 @@ def main() -> None:
 
     plt.imshow(np.rot90(matrix))
     plt.show()
-
 
     comparison_data = []
     for index, row in ground_truths.iterrows():
