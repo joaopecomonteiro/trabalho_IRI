@@ -69,7 +69,6 @@ def find_squares(edges):
 
 
 
-
 def find_all_cycles(graph):
     def dfs_cycle(start, current, visited, stack, cycles):
         visited[current] = True
@@ -110,38 +109,83 @@ def find_cycles(edges):
 
     return cycles
 
+angles_dict = {
+    'draw_triangle': 120,
+    'draw_square': 90,
+    'draw_pentagon': 72
+}
+
+def sort_vertices_by_angle(vertices, centroid):
+    centroid_x, centroid_y = centroid
+    sorted_vertices = sorted(vertices, key=lambda v: np.arctan2(v[1] - centroid_y, v[0] - centroid_x))
+    return sorted_vertices
 
 
-def detect_orientation_icp(source_points: np.ndarray, target_points: np.ndarray) -> float:
-    def convert_to_3d(points_2d: np.ndarray) -> np.ndarray:
-        return np.hstack((points_2d, np.zeros((points_2d.shape[0], 1))))
+def classify_shape(vertices, centroid):
+    num_vertices = len(vertices)
+    sorted_vertices = sort_vertices_by_angle(vertices, centroid)
 
-    source_points_3d = convert_to_3d(source_points)
-    target_points_3d = convert_to_3d(target_points)
+    if num_vertices == 3:
+        side_lengths = []
+        for i in range(num_vertices):
+            x1, y1 = sorted_vertices[i]
+            x2, y2 = sorted_vertices[(i + 1) % num_vertices]
+            side_length = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+            side_lengths.append(side_length)
+        if all(abs(length - side_lengths[0]) < 0.1 for length in side_lengths):
+            return "Regular Triangle"
+        else:
+            return "Not Regular Triangle"
 
-    source_pcd = o3d.geometry.PointCloud()
-    target_pcd = o3d.geometry.PointCloud()
-    source_pcd.points = o3d.utility.Vector3dVector(source_points_3d)
-    target_pcd.points = o3d.utility.Vector3dVector(target_points_3d)
+    elif num_vertices == 4:
+        side_lengths = []
+        for i in range(num_vertices):
+            x1, y1 = sorted_vertices[i]
+            x2, y2 = sorted_vertices[(i + 1) % num_vertices]
+            side_length = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+            side_lengths.append(side_length)
+        if all(abs(length - side_lengths[0]) < 0.1 for length in side_lengths):
+            return "Square"
+        elif (abs(side_lengths[0] - side_lengths[2]) < 0.1 and
+              abs(side_lengths[1] - side_lengths[3]) < 0.1):
+            return "Rectangle"
+        else:
+            return "Primitive with 4 sides"
 
-    threshold = 0.02
-    trans_init = np.eye(4)
-    reg_p2p = o3d.pipelines.registration.registration_icp(
-        source_pcd, target_pcd, threshold, trans_init,
-        o3d.pipelines.registration.TransformationEstimationPointToPoint())
+    elif num_vertices == 5:
+        side_lengths = []
+        for i in range(num_vertices):
+            x1, y1 = sorted_vertices[i]
+            x2, y2 = sorted_vertices[(i + 1) % num_vertices]
+            side_length = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+            side_lengths.append(side_length)
+        if all(abs(length - side_lengths[0]) < 0.1 for length in side_lengths):
+            return "Regular Pentagon"
+        else:
+            return "Not Regular Pentagon"
 
-    rotation_matrix = reg_p2p.transformation[:3, :3]
-
-    # Ensure the rotation matrix is in the xy-plane
-    angle = np.arctan2(rotation_matrix[1, 0], rotation_matrix[0, 0])
-
-    # Convert to counterclockwise from the x-axis
-    if angle < 0:
-        angle += 2 * np.pi
-
-    return angle
+    else:
+        return "Can't Identify Primitive"
 
 
+def calculate_rotation_angle(rotated_vertices, type_shape):
+    # Sort vertices based on their y-coordinate
+    sorted_vertices = sorted(rotated_vertices, key=lambda vertex: vertex[1])
+
+    # Get the first two points (lowest y-coordinate)
+    p1, p2 = sorted_vertices[:2]
+
+    # Calculate the angle of the line connecting p1 and p2 with respect to the x-axis
+    angle = np.arctan2(p2[1] - p1[1], p2[0] - p1[0])
+
+    # Convert angle to degrees and adjust according to shape
+    rotation_angle = np.degrees(angle) % angles_dict[type_shape]
+
+    return rotation_angle
+
+def parse_vertices(vertices_str):
+    vertices = vertices_str.replace("(", "").replace(")", "").split(";")
+    return [tuple(map(int, v.split(","))) for v in vertices]
 
 def plane_intersect(a, b):
     """
@@ -165,13 +209,12 @@ def plane_intersect(a, b):
     return p_inter[0], (p_inter + aXb_vec)[0]
 
 
-
-
 def main() -> None:
-    pcd_filename = "point_clouds/zzzmap_test_41.npy"
-    shapes_filename = "worlds/custom_maps/zzzmap_test_4_shapes.pkl"
-    csv_points = "worlds/custom_maps/zzzmap_test_4_points.csv"
-    output_csv = "results/comparison_results.csv"
+    pcd_filename = "point_clouds/zmap_test_4_ana.npy"
+    shapes_filename = "worlds/custom_maps/zmap_test_4_shapes.pkl"
+    csv_points = "worlds/custom_maps/zmap_test_4_points.csv"
+    output_csv = "results/comparison_results_zmap_test_4.csv"
+    ground_truths = pd.read_csv("ground_truth/zmap_test_4_shapes.csv")
 
     data_arr = np.load(pcd_filename)
     data_arr = data_arr[data_arr[:, -1] >= -0.02]
@@ -184,6 +227,7 @@ def main() -> None:
     source_points = source_points_df[['x', 'y']].to_numpy()
 
     planes = []
+    inliers_all = []
     outliers_before = data_arr
     for orientation in ["vertical"]:
         print(orientation)
@@ -200,6 +244,7 @@ def main() -> None:
 
             outliers_before = outliers_plane
             planes.append((equation, inliers_plane))
+            inliers_all.extend(inliers_plane)
 
     z = np.max(data_arr[:, 2])
     intersection_points = []
@@ -246,17 +291,7 @@ def main() -> None:
     selected_points = []
     for cycle in shapes:
         if cycle:
-            selected_points.append(intersection_points[cycle[0]])
-
-    orientation_angles = []
-    target_points_list = []
-    for point in selected_points:
-        target_points = point[:2].reshape(1, -1)
-        orientation_angle = detect_orientation_icp(source_points, target_points)
-        orientation_angles.append((point, orientation_angle))
-        target_points_list.append(target_points)
-
-    target_points_array = np.vstack(target_points_list)
+            selected_points.append([intersection_points[idx] for idx in cycle])
 
     cycle_centers = []
     for cycle in shapes:
@@ -266,13 +301,35 @@ def main() -> None:
 
     cycle_centers = np.array(cycle_centers)
 
+    orientation_angles = []
+    detected_shapes = []
+    for points, center in zip(selected_points, cycle_centers):
+        flat_points = [[point[0] / 1000, point[1] / 1000] for point in points]
+        classification = classify_shape(flat_points, center[:2])
+
+        shape_key = ''
+        if classification == "Regular Triangle" or classification == "Not Regular Triangle":
+            shape_key = 'draw_triangle'
+        elif classification == "Square" or classification == "Rectangle":
+            shape_key = 'draw_square'
+        elif classification == "Regular Pentagon" or classification == "Not Regular Pentagon":
+            shape_key = 'draw_pentagon'
+
+        if shape_key:
+            rotation_angle = calculate_rotation_angle(flat_points, shape_key)
+            orientation_angles.append(rotation_angle)
+            detected_shapes.append(classification)
+        else:
+            orientation_angles.append(None)
+            detected_shapes.append("Unknown")
+
     # Ensure all arrays have the same length
     num_points = len(intersection_points)
     num_centers = len(cycle_centers)
     num_angles = len(orientation_angles)
 
     repeated_centers = np.repeat(cycle_centers, num_points // num_centers + 1, axis=0)[:num_points]
-    repeated_angles = np.repeat([angle for _, angle in orientation_angles], num_points // num_angles + 1)[:num_points]
+    repeated_angles = np.repeat(orientation_angles, num_points // num_angles + 1)[:num_points]
 
     results_df = pd.DataFrame({
         'intersection_x': intersection_points[:, 0],
@@ -282,22 +339,21 @@ def main() -> None:
         'center_y': repeated_centers[:, 1],
         'center_z': repeated_centers[:, 2],
         'angle_rad': repeated_angles,
-        'angle_deg': np.degrees(repeated_angles)
+        'angle_deg': [angle if angle is not None else None for angle in repeated_angles]
     })
 
     results_df.to_csv(output_csv, index=False)
 
     # Visualize the points and their orientation angles
     plt.figure(figsize=(10, 10))
+    plt.scatter(np.array(inliers_all)[:, 0], np.array(inliers_all)[:, 1], c='orange', label='Inliers')
     plt.scatter(source_points[:, 0], source_points[:, 1], c='blue', label='Source Points')
     plt.scatter(intersection_points[:, 0], intersection_points[:, 1], c='green', label='Intersection Points')
-    plt.scatter(target_points_array[:, 0], target_points_array[:, 1], c='red', label='Target Points')
-    plt.scatter(cycle_centers[:, 0], cycle_centers[:, 1], c='purple', label='Cycle Centers', marker='x')
 
-    for point, angle in orientation_angles:
-        x, y = point[:2]
-        plt.arrow(x, y, 0.1 * np.cos(angle), 0.1 * np.sin(angle), color='r', head_width=0.05)
-        plt.text(x, y, f"{np.degrees(angle):.2f}Â°", color='red', fontsize=12)
+    for point, angle in zip(cycle_centers, orientation_angles):
+        if angle is not None:
+            x, y = point[:2]
+            plt.text(x, y, f"{angle:.2f}°", color='red', fontsize=12)
 
     for center in cycle_centers:
         x, y = center[:2]
@@ -326,8 +382,32 @@ def main() -> None:
     plt.imshow(np.rot90(matrix))
     plt.show()
 
-    #with open(shapes_filename, 'rb') as f:
-    #    gt_shapes = pickle.load(f)
+
+    comparison_data = []
+    for index, row in ground_truths.iterrows():
+        shape = row['Shape']
+        vertices = parse_vertices(row['Vertices'])
+        gt_angle = row['Angle']
+        gt_center = np.array(eval(row['Center']))
+
+        # Find the closest detected shape
+        detected_center_idx = np.argmin(np.linalg.norm(cycle_centers[:, :2] * 1000 - gt_center[:2], axis=1))
+        detected_center = cycle_centers[detected_center_idx] * 1000
+        detected_angle = orientation_angles[detected_center_idx]
+
+        center_error = np.linalg.norm(gt_center[:2] - detected_center[:2])
+        angle_error = np.abs(gt_angle - detected_angle) if detected_angle is not None else None
+
+        comparison_data.append({
+            'Ground Truth Shape': shape,
+            'Detected Shape': detected_shapes[detected_center_idx],
+            'Center Error': center_error,
+            'Angle Error': angle_error
+        })
+
+    comparison_df = pd.DataFrame(comparison_data)
+    print(comparison_df)
+
 
 
 
