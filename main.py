@@ -113,7 +113,9 @@ def find_cycles(edges):
 angles_dict = {
     'draw_triangle': 120,
     'draw_square': 90,
-    'draw_pentagon': 72
+    'draw_pentagon': 72,
+    'draw_plane': 0,
+    'draw_unknown': 0
 }
 
 
@@ -358,22 +360,24 @@ def main() -> None:
     for points, center in zip(selected_points, cycle_centers):
         flat_points = [[point[0] / 1000, point[1] / 1000] for point in points]
         classification = classify_shape(flat_points, center[:2])
+        print(classification)
 
         shape_key = ''
-        if classification == "Triangle":
+        if classification == "Triangle" or classification == "Regular Triangle" or classification == "Polygon with 3 vertices":
             shape_key = 'draw_triangle'
-        elif classification == "Square" or classification == "Rectangle":
+        elif classification == "Square" or classification == "Rectangle" or classification == "Polygon with 4 vertices":
             shape_key = 'draw_square'
-        elif classification == "Regular Pentagon":
+        elif classification == "Regular Pentagon" or classification == "Polygon with 5 vertices":
             shape_key = 'draw_pentagon'
-
-        if shape_key:
-            rotation_angle = calculate_rotation_angle(flat_points, shape_key)
-            orientation_angles.append(rotation_angle)
-            detected_shapes.append(classification)
+        elif classification == "Plane":
+            shape_key = 'draw_plane'
         else:
-            orientation_angles.append(None)
-            detected_shapes.append("Unknown")
+            shape_key = 'draw_unknown'
+
+        rotation_angle = calculate_rotation_angle(flat_points, shape_key)
+        orientation_angles.append(rotation_angle)
+        detected_shapes.append(classification)
+
 
     # Ensure all arrays have the same length
     num_points = len(intersection_points)
