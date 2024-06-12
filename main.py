@@ -137,9 +137,9 @@ def find_cycles(edges):
 
 
 angles_dict = {
-    'draw_triangle': 120,
+    'draw_triangle': 60,
     'draw_square': 90,
-    'draw_pentagon': 72,
+    'draw_pentagon': 36,
     'draw_plane': 0,
     'draw_unknown': 0
 }
@@ -229,13 +229,16 @@ def calculate_rotation_angle(rotated_vertices, type_shape):
 
     # Calculate the angle of the line connecting p1 and p2 with respect to the x-axis
     angle = np.arctan2(p2[1] - p1[1], p2[0] - p1[0])
-    #print(f"angle -> {angle}")
+
+
+    angle_degrees = np.degrees(angle)
+    #print(angle_degrees)
     # Convert angle to degrees and adjust according to shape
-    #if np.degrees(angle) < 0:
-    rotation_angle = np.degrees(angle) % angles_dict[type_shape]
-    #else:
-    #    rotation_angle = np.degrees(angle) % angles_dict[type_shape]
-    #print(f"angle -> {rotation_angle}")
+    rotation_angle = angle_degrees % angles_dict[type_shape]
+
+    if angle_degrees > angles_dict[type_shape]:
+        rotation_angle -= angles_dict[type_shape]
+
     return rotation_angle
 
 
