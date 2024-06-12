@@ -80,7 +80,7 @@ def main() -> None:
     for new_position in tqdm(moves):
         x, y = int(new_position[0]*1000), int(new_position[1]*1000)
 
-        if x>0 and x<len(mask) and y>0 and y<len(mask) and mask[-y][x]==0:
+        if x>0 and x<len(mask) and y>0 and y<len(mask) and mask[y][x]==0:
             supervisor.step()
 
             warp_robot(supervisor, "EPUCK", new_position)
