@@ -34,7 +34,7 @@ class Plane:
             random.seed(random_seed)
             np.random.seed(random_seed)
 
-        dbscan = DBSCAN(eps=0.1, min_samples=1)
+        dbscan = DBSCAN(eps=0.2, min_samples=1)
         n_points = pts.shape[0]
         best_eq = []
         best_inliers = []

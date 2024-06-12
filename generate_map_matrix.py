@@ -23,7 +23,7 @@ angles_dict = {
 }
 
 custom_maps_filepath: str = './worlds/custom_maps/'
-map_name = "aaaaaaaaamap"
+map_name = "okokok"
 
 # Create and save the new Webots file
 base_map_webots_filepath: str = custom_maps_filepath + 'base_map.wbt'
@@ -31,7 +31,7 @@ f = open(base_map_webots_filepath, 'r')
 webots_str: str = f.read()
 f.close()
 
-map_webots_filepath: str = custom_maps_filepath + map_name + '.wbt'
+map_webots_filepath: str = "test_maps" + map_name + '.wbt'
 f = open(map_webots_filepath, 'w')
 f.write(webots_str+"\n")
 

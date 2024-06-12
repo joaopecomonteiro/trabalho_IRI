@@ -24,6 +24,8 @@ from sklearn.cluster import DBSCAN, KMeans
 
 import networkx as nx
 
+from Ransac import Ransac
+
 def find_squares(edges):
     #breakpoint()
     # Create the graph
@@ -98,6 +100,30 @@ def find_all_cycles(graph):
 
     return [list(cycle) for cycle in unique_cycles]
 
+
+def order_square_points(points):
+    # Find the minimum and maximum x and y coordinates
+    min_x = np.min(points[:, 0])
+    max_x = np.max(points[:, 0])
+    min_y = np.min(points[:, 1])
+    max_y = np.max(points[:, 1])
+
+    # Categorize points
+    top_points = points[points[:, 1] == max_y]
+    bottom_points = points[points[:, 1] == min_y]
+
+    # Sort top points by x (left to right)
+    top_left = top_points[top_points[:, 0].argmin()]
+    top_right = top_points[top_points[:, 0].argmax()]
+
+    # Sort bottom points by x (left to right)
+    bottom_left = bottom_points[bottom_points[:, 0].argmin()]
+    bottom_right = bottom_points[bottom_points[:, 0].argmax()]
+
+    # Order points as: top left, top right, bottom right, bottom left
+    sorted_points = np.array([top_left, top_right, bottom_right, bottom_left])
+
+    return sorted_points
 
 def find_cycles(edges):
     # Create the graph
@@ -203,10 +229,13 @@ def calculate_rotation_angle(rotated_vertices, type_shape):
 
     # Calculate the angle of the line connecting p1 and p2 with respect to the x-axis
     angle = np.arctan2(p2[1] - p1[1], p2[0] - p1[0])
-
+    #print(f"angle -> {angle}")
     # Convert angle to degrees and adjust according to shape
+    #if np.degrees(angle) < 0:
     rotation_angle = np.degrees(angle) % angles_dict[type_shape]
-
+    #else:
+    #    rotation_angle = np.degrees(angle) % angles_dict[type_shape]
+    #print(f"angle -> {rotation_angle}")
     return rotation_angle
 
 
@@ -257,7 +286,7 @@ def main() -> None:
 
     source_points_df = pd.read_csv(csv_points, header=None, names=['x', 'y'])
     source_points = source_points_df[['x', 'y']].to_numpy()
-
+    """
     planes = []
     inliers_all = []
     outliers_before = data_arr
@@ -267,10 +296,10 @@ def main() -> None:
         while len(inliers_plane) > 0:
             plane = Plane()
             total_points = len(outliers_before)
-            min_points = 700
+            min_points = 1000
             print(f"min_points: {min_points}")
-            equation, inliers_plane_ids = plane.fit(outliers_before, 0.03, minPoints=min_points, maxIteration=3000,
-                                                orientation=orientation, random_seed=42)
+            equation, inliers_plane_ids = plane.fit(outliers_before, 0.05, minPoints=min_points, maxIteration=50000,
+                                                orientation=orientation)
 
             if len(inliers_plane) <= 0:
                 break
@@ -301,6 +330,7 @@ def main() -> None:
             print(f"len planes -> {len(planes)}, n points left -> {len(outliers_before)}")
     #breakpoint()
     z = np.max(data_arr[:, 2])
+
     intersection_points = []
     intersection_edges = []
     for a in range(len(planes)):
@@ -339,6 +369,13 @@ def main() -> None:
             edges.append(edge_points)
     intersection_points = np.array(intersection_points)
     intersection_edges = edges
+    """
+    #breakpoint()
+    planes, intersection_points, intersection_edges, inliers_all = Ransac(data_arr,
+                                                                          min_points=1000,
+                                                                          threshold=0.05,
+                                                                          max_iteration=50000)
+
 
     shapes = find_cycles(intersection_edges)
 
@@ -386,7 +423,7 @@ def main() -> None:
 
     repeated_centers = np.repeat(cycle_centers, num_points // num_centers + 1, axis=0)[:num_points]
     repeated_angles = np.repeat(orientation_angles, num_points // num_angles + 1)[:num_points]
-
+    #breakpoint()
     results_df = pd.DataFrame({
         'intersection_x': intersection_points[:, 0],
         'intersection_y': intersection_points[:, 1],
@@ -402,9 +439,25 @@ def main() -> None:
 
     # Visualize the points and their orientation angles
     plt.figure(figsize=(10, 10))
+    for row in ground_truths['Vertices']:
+        vertices = np.array(parse_vertices(row)) / 1000
+        # vertices = order_square_points(vertices)
+        last_point = vertices[0]
+        for point in vertices[1:]:
+            #breakpoint()
+            plt.plot([last_point[0], point[0]], [last_point[1], point[1]], c='blue', label="Ransac")
+            last_point = point
+        plt.plot([vertices[0][0], vertices[-1][0]], [vertices[0][1], vertices[-1][1]], c="blue", label="Ground Truth")
+    #breakpoint()
+
     plt.scatter(np.array(inliers_all)[:, 0], np.array(inliers_all)[:, 1], c='orange', label='Inliers')
-    plt.scatter(source_points[:, 0], source_points[:, 1], c='blue', label='Source Points')
-    plt.scatter(intersection_points[:, 0], intersection_points[:, 1], c='green', label='Intersection Points')
+    #plt.scatter(source_points[:, 0], source_points[:, 1], c='blue', label='Source Points')
+    #plt.scatter(intersection_points[:, 0], intersection_points[:, 1], c='green', label='Intersection Points')
+
+    for edge in intersection_edges:
+        point_a = intersection_points[edge[0]]
+        point_b = intersection_points[edge[1]]
+        plt.plot([point_a[0], point_b[0]], [point_a[1], point_b[1]], c="green", label='Ransac')
 
     for point, angle in zip(cycle_centers, orientation_angles):
         if angle is not None:
@@ -417,7 +470,11 @@ def main() -> None:
 
     plt.xlabel('X')
     plt.ylabel('Y')
-    plt.legend()
+
+    handles, labels = plt.gca().get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    plt.legend(by_label.values(), by_label.keys(), loc='upper left')
+
     plt.title('Source Points, Intersection Points, and Target Points with Orientation Angles and Cycle Centers')
     plt.grid(True)
     plt.show()
