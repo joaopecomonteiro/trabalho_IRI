@@ -1,7 +1,7 @@
 import random
 import numpy as np
 from sklearn.cluster import DBSCAN
-
+from tqdm import tqdm
 
 class Plane:
     """
@@ -39,7 +39,7 @@ class Plane:
         best_eq = []
         best_inliers = []
 
-        for it in range(maxIteration):
+        for it in tqdm(range(maxIteration)):
             if orientation is None:
                 # Samples 3 random points
                 id_samples = random.sample(range(0, n_points), 3)
@@ -96,17 +96,32 @@ class Plane:
             self.equation = best_eq
 
         inliers_plane = pts[self.inliers, :]
+        inliers_indices = self.inliers
         if len(inliers_plane) > 0:
             clusters = dbscan.fit_predict(inliers_plane)
             unique_clusters = set(clusters)
+
             biggest_cluster_size = -1
             biggest_cluster_points = None
+            biggest_cluster_indices = None
+
             for cluster_label in unique_clusters:
+                if cluster_label == -1:
+                    continue  # Skip noise points labeled as -1
+                #breakpoint()
+                cluster_indices = inliers_indices[clusters == cluster_label]
                 cluster_points = inliers_plane[clusters == cluster_label]
+
                 if len(cluster_points) > biggest_cluster_size:
                     biggest_cluster_size = len(cluster_points)
                     biggest_cluster_points = cluster_points
-            inliers_plane = biggest_cluster_points
+                    biggest_cluster_indices = cluster_indices
 
-        self.inliers = inliers_plane
-        return self.equation, self.inliers
+            # Now biggest_cluster_indices contains the indices of the points in the largest cluster
+            inliers_plane_indices = biggest_cluster_indices
+        else:
+            inliers_plane_indices = []
+        #breakpoint()
+        self.inliers_indices = inliers_plane_indices
+        #breakpoint()
+        return self.equation, self.inliers_indices

@@ -17,6 +17,7 @@ import math
 import pickle
 
 import open3d as o3d
+import matplotlib.pyplot as plt
 #import pyransac3d as pyrsc
 
 from sklearn.cluster import DBSCAN, KMeans
@@ -48,9 +49,10 @@ def main() -> None:
 
     data = []
 
-    x = np.repeat(np.arange(0.1, 5, 0.15), 25)
-    y = np.arange(0.1, 5, 0.15)
-
+    y = np.arange(0.1, 10.2, 0.2)
+    x = np.repeat(np.arange(0.1, 10.2, 0.2), len(y))
+    #y = np.arange(0.1, 10, 0.15)
+    #breakpoint()
     # Calculate the necessary number of repeats for full_y
     num_repeats = (len(x) // len(y)) + 1
 
@@ -64,14 +66,17 @@ def main() -> None:
     #breakpoint()
     i = 4
 
+    map_name = "aaaaaaaaamap"
+
     #filename = f"point_clouds/map_test_{i}.npy"
-    filename = f"point_clouds/zzzmap_test_41.npy"
+    filename = f"point_clouds/{map_name}.npy"
     #mask = np.zeros((3000, 3000))
     #with open(f'worlds/custom_maps/map_test_{i}_mask.pkl', 'rb') as f:
-    with open(f'worlds/custom_maps/zzzmap_test_4_mask.pkl', 'rb') as f:
+    with open(f'worlds/custom_maps/{map_name}_mask.pkl', 'rb') as f:
         mask = pickle.load(f)
-
-
+    #breakpoint()
+    #breakpoint()
+    num_points_not_scanned = 0
     for new_position in tqdm(moves):
         x, y = int(new_position[0]*1000), int(new_position[1]*1000)
 
@@ -89,6 +94,7 @@ def main() -> None:
             robot_tf: np.ndarray = create_tf_matrix((robot_position[0], robot_position[1], 0.0), robot_orientation)
             data_tmp = np.array([[point.x, point.y, 0, 1] for point in pcd if math.isfinite(point.x) and math.isfinite(point.y) and math.isfinite(point.z)])
             z_tmp = np.array([point.z for point in pcd if math.isfinite(point.x) and math.isfinite(point.y) and math.isfinite(point.z)])
+
             data_tmp = data_tmp.T
 
             tf_data = robot_tf @ data_tmp
@@ -97,14 +103,17 @@ def main() -> None:
             tf_data[:, 2] = z_tmp
 
             data += list(tf_data)
-
-
+        else:
+            num_points_not_scanned += 1
+    print(f"Did not scan {num_points_not_scanned} points")
     data_arr = np.array(data)
 
     np.save(filename, data_arr)
 
-    data_arr = data_arr[data_arr[:, -1] >= -0.02]
+    data_arr = data_arr[data_arr[:, -1] >= 0]
+    print(f"Got {data_arr.shape[0]} points")
 
+    #breakpoint()
     point_cloud = o3d.geometry.PointCloud()
     point_cloud.points = o3d.utility.Vector3dVector(data_arr)
     o3d.visualization.draw_plotly([point_cloud])

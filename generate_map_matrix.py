@@ -4,6 +4,7 @@ import random
 from tqdm import tqdm
 import math
 from skimage.draw import line
+from skimage import draw
 import cv2
 import pickle
 import yaml
@@ -12,11 +13,45 @@ import os
 
 shapes = []
 
+wall_counter = 0
+
 angles_dict = {
     'draw_triangle': [-60, 60],
     'draw_square': [-45, 45],
     'draw_pentagon': [-36, 36]
 }
+
+custom_maps_filepath: str = './worlds/custom_maps/'
+map_name = "aaaaaaaaamap"
+
+# Create and save the new Webots file
+base_map_webots_filepath: str = custom_maps_filepath + 'base_map.wbt'
+f = open(base_map_webots_filepath, 'r')
+webots_str: str = f.read()
+f.close()
+
+map_webots_filepath: str = custom_maps_filepath + map_name + '.wbt'
+f = open(map_webots_filepath, 'w')
+f.write(webots_str+"\n")
+
+resolution =  0.001
+origin =  [0.000000, 0.000000, 0.000000]
+occupied_thresh =  0.65
+height = 10000
+width = 10000
+
+#    Add the rectangular arena
+f.write('RectangleArena {\n')
+f.write('  translation ' + str(origin[0] + resolution * width / 2) + ' ' + str(origin[1] + resolution * height / 2) + ' 0.0\n')
+f.write('  floorSize ' + str(resolution * width) + ' ' + str(resolution * height) + "\n")
+f.write('  floorTileSize 0.25 0.25\n')
+f.write('  floorAppearance Parquetry {\n')
+f.write('    type "light strip"\n')
+f.write('  }\n')
+f.write('  wallHeight 0.05\n')
+f.write('}\n')
+
+
 # Function to draw a square on the matrix
 
 def expand_geometric_figure(vertices, pixel_distance):
@@ -63,9 +98,24 @@ def rotate_point(center, point, angle):
     qy = oy + np.sin(angle_rad) * (px - ox) + np.cos(angle_rad) * (py - oy)
     return int(qx), int(qy)
 
+
+def write_webots_world(point1, point2):
+    global wall_counter
+    x1, y1, x2, y2 = point1[0], point1[1], point2[0], point2[1]
+    angle = math.atan2(y2 - y1, x2 - x1)
+    M = ((x2 + x1)/2, (y2 + y1)/2)
+    size = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+    f.write('Wall {\n')
+    f.write(f'  translation {(M[0])*resolution} {((M[1]))*resolution} 0\n')
+    f.write(f'  rotation 0 0 1 {angle+(math.pi/2)} \n')
+    f.write(f'  size 0.05 {size*resolution} 0.05\n')
+    f.write(f'  name "solid' + str(wall_counter) + '"')
+    f.write('}\n')
+    wall_counter += 1
+
 #==================================================================================================
 
-def draw_square(matrix, mask, shapes, top_left, size, angle=0, tresh_matrix=None, threshold=300):
+def draw_square(matrix, mask, shapes, top_left, size, angle=0, tresh_matrix=None, threshold=300, placed=None):
     x, y = top_left
 
     # Define the vertices of the square
@@ -88,6 +138,19 @@ def draw_square(matrix, mask, shapes, top_left, size, angle=0, tresh_matrix=None
     B_rot = rotate_point(center, B, angle)
     C_rot = rotate_point(center, C, angle)
     D_rot = rotate_point(center, D, angle)
+
+    if placed:
+        write_webots_world(A_rot, B_rot)
+        write_webots_world(B_rot, C_rot)
+        write_webots_world(C_rot, D_rot)
+        write_webots_world(D_rot, A_rot)
+
+        f_csv = open(custom_maps_filepath + map_name + '_points.csv', 'w', newline='')
+        writer = csv.writer(f_csv)
+
+
+
+
     #print(A_rot, B_rot, C_rot, D_rot)
     # Draw the rotated square
     cv2.line(matrix, A_rot, B_rot, color=(255, 255, 255), thickness=10)
@@ -97,24 +160,36 @@ def draw_square(matrix, mask, shapes, top_left, size, angle=0, tresh_matrix=None
 
     # Create and fill the polygon
     polygon = np.array([A_rot, B_rot, C_rot, D_rot], np.int32)
+    #breakpoint()
+    #rr, cc = draw.polygon(polygon[:, 1], polygon[:, 0], mask.shape)
+    #mask[rr, cc] = 1
+
     cv2.fillConvexPoly(mask, polygon, 1)
     shapes.append(["square", polygon, angle, center])
+    #if placed:
+    #    breakpoint()
 
     if tresh_matrix is not None:
 
-        A_exp, B_exp, C_exp, D_exp = expand_geometric_figure([A_rot, B_rot, C_rot, D_rot], 300)
+        A_exp, B_exp, C_exp, D_exp = expand_geometric_figure([A_rot, B_rot, C_rot, D_rot], 1000)
 
         if any(x < threshold or x > tresh_matrix.shape[0] - threshold or y < threshold or y > tresh_matrix.shape[1] - threshold for x, y in [A_exp, B_exp, C_exp, D_exp]):
             tresh_matrix += 1000
 
         #print(A_exp, B_exp, C_exp, D_exp)
         polygon_exp = np.array([A_exp, B_exp, C_exp, D_exp], np.int32)
-        cv2.fillConvexPoly(tresh_matrix, polygon_exp, (255, 255, 255))
+        #print("im here")
+        #breakpoint()
+        #rr, cc = draw.polygon(polygon_exp[:, 1], polygon_exp[:, 0], tresh_matrix.shape)
+        #tresh_matrix[rr, cc] = 1
 
+
+        cv2.fillConvexPoly(tresh_matrix, polygon_exp, (255, 255, 255))
+    #print("okok")
     return shapes
 
 # Function to draw a triangle on the matrix
-def draw_triangle(matrix, mask, shapes, top_left, size, angle=0, tresh_matrix = None, threshold=300):
+def draw_triangle(matrix, mask, shapes, top_left, size, angle=0, tresh_matrix = None, threshold=300, placed=None):
 
     x, y = top_left
     if size % 2 != 0:
@@ -126,7 +201,7 @@ def draw_triangle(matrix, mask, shapes, top_left, size, angle=0, tresh_matrix = 
 
     A = (x, y)
     B = (x + size, y)
-    C = (int(x + size / 2), y - height)
+    C = (int(x + size / 2), y + height)
     #print('#')
     #print(A, B, C)
 
@@ -136,6 +211,11 @@ def draw_triangle(matrix, mask, shapes, top_left, size, angle=0, tresh_matrix = 
     A_rot = rotate_point(center, A, angle)
     B_rot = rotate_point(center, B, angle)
     C_rot = rotate_point(center, C, angle)
+
+    if placed:
+        write_webots_world(A_rot, B_rot)
+        write_webots_world(A_rot, C_rot)
+        write_webots_world(B_rot, C_rot)
 
     #print(A_rot, B_rot, C_rot)
     cv2.line(matrix, A_rot, B_rot, color=(255, 255, 255), thickness=10)
@@ -149,7 +229,7 @@ def draw_triangle(matrix, mask, shapes, top_left, size, angle=0, tresh_matrix = 
 
     if tresh_matrix is not None:
 
-        A_exp, B_exp, C_exp = expand_geometric_figure([A_rot, B_rot, C_rot], 300)
+        A_exp, B_exp, C_exp = expand_geometric_figure([A_rot, B_rot, C_rot], 1000)
         #print(A_exp, B_exp, C_exp)
 
         # test if any of the expanded points is too close to the border
@@ -166,9 +246,9 @@ def draw_triangle(matrix, mask, shapes, top_left, size, angle=0, tresh_matrix = 
 
 # Function to draw a pentagon on the matrix
 
-def draw_pentagon(matrix, mask, shapes, center, size, angle=0, tresh_matrix=None, threshold=300):
+def draw_pentagon(matrix, mask, shapes, center, size, angle=0, tresh_matrix=None, threshold=300, placed=None):
     x_center, y_center = center
-    default_pos_angle = -90  # Align pentagon to the x-axis
+    default_pos_angle = -90 + 180  # Align pentagon to the x-axis
 
     vertices = []
     for i in range(5):
@@ -188,9 +268,13 @@ def draw_pentagon(matrix, mask, shapes, center, size, angle=0, tresh_matrix=None
 
     #print(vertices_rotated)
 
+
+
     for i in range(5):
         x1, y1 = vertices_rotated[i]
         x2, y2 = vertices_rotated[(i + 1) % 5]
+        if placed:
+            write_webots_world((x1, y1), (x2, y2))
         cv2.line(matrix, (x1, y1), (x2, y2), color=(255, 255, 255), thickness=10)
 
     polygon = np.array(vertices_rotated, np.int32)
@@ -199,7 +283,7 @@ def draw_pentagon(matrix, mask, shapes, center, size, angle=0, tresh_matrix=None
 
     if tresh_matrix is not None:
 
-        vertices_exp = expand_geometric_figure(vertices_rotated, 300)
+        vertices_exp = expand_geometric_figure(vertices_rotated, 1000)
         #print(vertices_exp)
 
         #for i in range(5):
@@ -244,33 +328,35 @@ def place_shape(matrix, mask, shapes, shape_fn, size,angle=0):
         # y = random.randint(0, matrix.shape[1] - size)
         x = random.randint(0, matrix.shape[0]-1)
         y = random.randint(0, matrix.shape[1]-1)
-
         if can_place(matrix, mask, shape_fn, (x, y), size, angle):
-            shapes = shape_fn(matrix, mask, shapes,(x, y), size,angle)
-            # print the shape characteristics
-            print(f'Placed {shapes[-1][0]} at {shapes[-1][3]} with a rotation of {angle}°.')
             placed = True
+            shapes = shape_fn(matrix, mask, shapes,(x, y), size,angle, placed=placed)
+            # print the shape characteristics
+            print(f'Placed {shapes[-1][0]} at {shapes[-1][3]} with a rotation of {angle}° and a size of {size}.')
+            plt.imshow(matrix)
+            plt.show()
     return shapes
 
 # Main function to generate the matrix with shapes
 def generate_matrix():
     # matrix = np.ones((3000, 3000, 3), dtype=np.uint8) * 0
     # mask = np.zeros((3000, 3000))
-    matrix = np.ones((5000, 5000, 3), dtype=np.uint8) * 0
-    mask = np.zeros((5000, 5000))
+    matrix = np.ones((height, width, 3), dtype=np.uint8) * 0
+    mask = np.zeros((height, width))
 
     shapes = []
 
-    num_shapes = random.randint(3, 5)
+    num_shapes = random.randint(5, 9)
     #num_shapes = 1
     print(num_shapes)
-    shape_functions = [draw_square,draw_triangle,draw_pentagon]
-    shape_sizes = [random.randint(400, 900) for _ in range(num_shapes)]  # Example size range
+    shape_functions = [draw_square, draw_triangle, draw_pentagon]
+    shape_sizes = [random.randint(800, 1200) for _ in range(num_shapes)]  # Example size range
     #breakpoint()
     for size in shape_sizes:
         shape_fn = random.choice(shape_functions)
         angle_range = angles_dict[shape_fn.__name__]
         angle = random.randint(angle_range[0], angle_range[1])
+        #angle = 0
         #print(size)
         shapes = place_shape(matrix, mask, shapes,shape_fn, size,angle)
 
@@ -294,10 +380,18 @@ def save_shapes_to_csv(shapes, filename):
             writer.writerow([shape_type, vertices_str, angle, center])
 
 if __name__ == "__main__":
+
+
+
+
     for i in range(4,5):
+        i = 100
+
+
+
         matrix, mask, shapes = generate_matrix()
         #breakpoint()
-
+        f.close()
 
         new_matrix = matrix.copy()
         new_matrix[matrix == 255] = 0
@@ -307,15 +401,15 @@ if __name__ == "__main__":
         #cv2.imshow('image', mask)
         #cv2.waitKey(0)
 
-        plt.imsave(f'worlds/custom_maps/zzzmap_test_{i}_image.png', new_matrix, cmap='gray', origin='lower')
+        plt.imsave(f'worlds/custom_maps/{map_name}_image.png', new_matrix, cmap='gray', origin='lower')
 
-        with open(f'worlds/custom_maps/zzzmap_test_{i}_mask.pkl', 'wb') as f:
+        with open(f'worlds/custom_maps/{map_name}_mask.pkl', 'wb') as f:
             pickle.dump(mask, f)
 
-        with open(f'worlds/custom_maps/zzzmap_test_{i}_shapes.pkl', 'wb') as f:
+        with open(f'worlds/custom_maps/{map_name}_shapes.pkl', 'wb') as f:
             pickle.dump(shapes, f)
 
-        save_shapes_to_csv(shapes, f'ground_truth/zzzmap_test_{i}_shapes.csv')
+        save_shapes_to_csv(shapes, f'ground_truth/{map_name}_shapes.csv')
         #breakpoint()
 
         yaml_data = {
@@ -328,11 +422,4 @@ if __name__ == "__main__":
         yaml_filename = f'worlds/custom_maps/zzzmap_test_{i}_config.yaml'
         with open(yaml_filename, 'w') as yaml_file:
             yaml.dump(yaml_data, yaml_file)
-    #import skimage
-
-
-    #plt.imshow(image);plt.colorbar();plt.show()
-    #display_matrix(image)
-    #breakpoint()
-    #plt.imsave('worlds/custom_maps/teste.png', new_matrix, cmap='gray')
 

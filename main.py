@@ -186,6 +186,11 @@ def classify_shape(vertices, centroid):
     else:
         return f"Polygon with {num_vertices} vertices"
 
+    threshold = 0.02
+    trans_init = np.eye(4)
+    reg_p2p = o3d.pipelines.registration.registration_icp(
+        source_pcd, target_pcd, threshold, trans_init,
+        o3d.pipelines.registration.TransformationEstimationPointToPoint())
 
 def calculate_rotation_angle(rotated_vertices, type_shape):
     # Sort vertices based on their y-coordinate
@@ -230,16 +235,20 @@ def plane_intersect(a, b):
     return p_inter[0], (p_inter + aXb_vec)[0]
 
 
+
+
 def main() -> None:
-    pcd_filename = "point_clouds/zmap_test_4_ana.npy"
+    mapname = "aaaaaaaaamap"
+    #mapname = "test_webots_wall"
+    pcd_filename = f"point_clouds/{mapname}.npy"
     #shapes_filename = "worlds/custom_maps/zmap_test_4_shapes.pkl"
-    csv_points = "worlds/custom_maps/zmap_test_4_points.csv"
-    output_csv = "results/comparison_results_zmap_test_4.csv"
-    ground_truths = pd.read_csv("ground_truth/zmap_test_4_shapes.csv")
+    csv_points = f"worlds/custom_maps/{mapname}_points.csv"
+    output_csv = f"results/comparison_results_{mapname}.csv"
+    ground_truths = pd.read_csv(f"ground_truth/{mapname}_shapes.csv")
 
     data_arr = np.load(pcd_filename)
-    data_arr = data_arr[data_arr[:, -1] >= -0.02]
-
+    data_arr = data_arr[data_arr[:, -1] >= 0]
+    #breakpoint()
     point_cloud = o3d.geometry.PointCloud()
     point_cloud.points = o3d.utility.Vector3dVector(data_arr)
     o3d.visualization.draw_plotly([point_cloud])
@@ -255,18 +264,40 @@ def main() -> None:
         inliers_plane = [0, 0, 0]
         while len(inliers_plane) > 0:
             plane = Plane()
-            equation, inliers_plane = plane.fit(outliers_before, 0.02, minPoints=300, maxIteration=10000,
+            total_points = len(outliers_before)
+            min_points = 700
+            print(f"min_points: {min_points}")
+            equation, inliers_plane_ids = plane.fit(outliers_before, 0.03, minPoints=min_points, maxIteration=3000,
                                                 orientation=orientation, random_seed=42)
 
             if len(inliers_plane) <= 0:
                 break
-            outliers_plane = np.array([point for point in outliers_before if point not in inliers_plane])
-            outliers_full = np.array([point for point in data_arr if point not in inliers_plane])
+            #breakpoint()
+            #outliers_plane = np.array([point for point in outliers_before if point not in inliers_plane])
+            #outliers_full = np.array([point for point in data_arr if point not in inliers_plane])
 
-            outliers_before = outliers_plane
-            planes.append((equation, inliers_plane))
+            #outliers_before = outliers_plane
+            #planes.append((equation, inliers_plane))
+            #inliers_all.extend(inliers_plane)
+
+            # --------
+
+            all_indices = np.arange(outliers_before.shape[0])
+            outliers_plane_indices = np.setdiff1d(all_indices, inliers_plane_ids)
+            outliers_plane = outliers_before[outliers_plane_indices]
+
+            inliers_plane = outliers_before[inliers_plane_ids]
             inliers_all.extend(inliers_plane)
+            outliers_before = outliers_plane
 
+            #point_cloud = o3d.geometry.PointCloud()
+            #point_cloud.points = o3d.utility.Vector3dVector(outliers_plane)
+            #o3d.visualization.draw_plotly([point_cloud])
+
+            if len(equation) > 0:
+                planes.append((equation, inliers_plane))
+            print(f"len planes -> {len(planes)}, n points left -> {len(outliers_before)}")
+    #breakpoint()
     z = np.max(data_arr[:, 2])
     intersection_points = []
     intersection_edges = []
@@ -280,12 +311,12 @@ def main() -> None:
                 x, y = point_a[0], point_a[1]
                 for point in plane_a[1]:
                     x2, y2 = point[0], point[1]
-                    if np.sqrt((x - x2) ** 2 + (y - y2) ** 2) < 0.1:
+                    if np.sqrt((x - x2) ** 2 + (y - y2) ** 2) < 0.2:
                         read += 1
                         break
                 for point in plane_b[1]:
                     x2, y2 = point[0], point[1]
-                    if np.sqrt((x - x2) ** 2 + (y - y2) ** 2) < 0.1:
+                    if np.sqrt((x - x2) ** 2 + (y - y2) ** 2) < 0.2:
                         read += 1
                         break
                 if read == 2:
@@ -388,7 +419,7 @@ def main() -> None:
     plt.show()
 
     # Visualize the intersection edges and points
-    matrix = np.zeros((530, 530))
+    matrix = np.zeros((1030, 1030))
     for edge in intersection_edges:
         point_a = np.round(intersection_points[edge[0]] * 100).astype(int) + 15
         point_b = np.round(intersection_points[edge[1]] * 100).astype(int) + 15
@@ -428,7 +459,7 @@ def main() -> None:
     comparison_df = pd.DataFrame(comparison_data)
     print(comparison_df)
 
-
+    breakpoint()
 
 
 if __name__ == '__main__':
