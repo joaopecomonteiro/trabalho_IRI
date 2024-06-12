@@ -16,14 +16,14 @@ shapes = []
 wall_counter = 0
 
 angles_dict = {
-    'draw_triangle': [-60, 60],
-    'draw_rectangle': [-45, 45],
-    'draw_square': [-45, 45],
-    'draw_pentagon': [-36, 36]
+    'draw_triangle': [0, 60],
+    'draw_rectangle': [0, 45],
+    'draw_square': [0, 45],
+    'draw_pentagon': [0, 36]
 }
 
 custom_maps_filepath: str = './worlds/custom_maps/'
-map_name = "okokok"
+map_name = "1rectangle"
 
 # Create and save the new Webots file
 base_map_webots_filepath: str = custom_maps_filepath + 'base_map.wbt'
@@ -38,8 +38,8 @@ f.write(webots_str+"\n")
 resolution =  0.001
 origin =  [0.000000, 0.000000, 0.000000]
 occupied_thresh =  0.65
-height = 10000
-width = 10000
+height = 5000
+width = 5000
 
 #    Add the rectangular arena
 f.write('RectangleArena {\n')
@@ -109,7 +109,7 @@ def write_webots_world(point1, point2):
     f.write('Wall {\n')
     f.write(f'  translation {(M[0])*resolution} {((M[1]))*resolution} 0\n')
     f.write(f'  rotation 0 0 1 {angle+(math.pi/2)} \n')
-    f.write(f'  size 0.05 {size*resolution} 0.05\n')
+    f.write(f'  size 0.05 {(size+50)*resolution} 0.05\n')
     f.write(f'  name "solid' + str(wall_counter) + '"')
     f.write('}\n')
     wall_counter += 1
@@ -164,7 +164,7 @@ def draw_square(matrix, mask, shapes, top_left, size, angle=0, thresh_mask=None,
 
     if thresh_mask is not None:
 
-        A_exp, B_exp, C_exp, D_exp = expand_geometric_figure([A_rot, B_rot, C_rot, D_rot], 1000)
+        A_exp, B_exp, C_exp, D_exp = expand_geometric_figure([A_rot, B_rot, C_rot, D_rot], 500)
 
         if any(x < threshold or x > thresh_mask.shape[0] - threshold or y < threshold or y > thresh_mask.shape[1] - threshold for x, y in [A_exp, B_exp, C_exp, D_exp]):
             thresh_mask += 1000
@@ -234,7 +234,7 @@ def draw_rectangle(matrix, mask, shapes, top_left, size, angle=0, thresh_mask=No
 
     if thresh_mask is not None:
 
-        A_exp, B_exp, C_exp, D_exp = expand_geometric_figure([A_rot, B_rot, C_rot, D_rot], 1000)
+        A_exp, B_exp, C_exp, D_exp = expand_geometric_figure([A_rot, B_rot, C_rot, D_rot], 500)
 
         if any(x < threshold or x > thresh_mask.shape[0] - threshold or y < threshold or y > thresh_mask.shape[1] - threshold for x, y in [A_exp, B_exp, C_exp, D_exp]):
             thresh_mask += 1000
@@ -291,7 +291,7 @@ def draw_triangle(matrix, mask, shapes, top_left, size, angle=0, thresh_mask = N
 
     if thresh_mask is not None:
 
-        A_exp, B_exp, C_exp = expand_geometric_figure([A_rot, B_rot, C_rot], 1000)
+        A_exp, B_exp, C_exp = expand_geometric_figure([A_rot, B_rot, C_rot], 500)
         #print(A_exp, B_exp, C_exp)
 
         # test if any of the expanded points is too close to the border
@@ -343,7 +343,7 @@ def draw_pentagon(matrix, mask, shapes, center, size, angle=0, thresh_mask=None,
 
     if thresh_mask is not None:
 
-        vertices_exp = expand_geometric_figure(vertices_rotated, 1000)
+        vertices_exp = expand_geometric_figure(vertices_rotated, 500)
         #print(vertices_exp)
 
         #for i in range(5):
@@ -407,11 +407,11 @@ def generate_matrix():
 
     shapes = []
 
-    num_shapes = random.randint(5, 8)
+    num_shapes = random.randint(1, 1)
     #num_shapes = 1
     print(num_shapes)
-    shape_functions = [draw_square, draw_rectangle, draw_triangle, draw_pentagon]
-    shape_sizes = [random.randint(800, 1200) for _ in range(num_shapes)]  # Example size range
+    shape_functions = [draw_rectangle]
+    shape_sizes = [random.randint(1000, 1300) for _ in range(num_shapes)]  # Example size range
     #breakpoint()
     for size in shape_sizes:
         shape_fn = random.choice(shape_functions)
@@ -483,4 +483,3 @@ if __name__ == "__main__":
         yaml_filename = f'worlds/custom_maps/zzzmap_test_{i}_config.yaml'
         with open(yaml_filename, 'w') as yaml_file:
             yaml.dump(yaml_data, yaml_file)
-
