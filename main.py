@@ -191,10 +191,19 @@ def classify_shape(vertices, centroid):
             x2, y2 = sorted_vertices[(i + 1) % num_vertices]
             side_length = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
             side_lengths.append(side_length)
-        if all(abs(length - side_lengths[0]) < 0.1 for length in side_lengths):
+
+        #print(side_lengths)
+        # Calculate diagonals
+        diagonal1 = math.sqrt(
+            (sorted_vertices[0][0] - sorted_vertices[2][0]) ** 2 + (sorted_vertices[0][1] - sorted_vertices[2][1]) ** 2)
+        diagonal2 = math.sqrt(
+            (sorted_vertices[1][0] - sorted_vertices[3][0]) ** 2 + (sorted_vertices[1][1] - sorted_vertices[3][1]) ** 2)
+
+        if all(abs(length - side_lengths[0]) < 0.1 for length in side_lengths) and abs(diagonal1 - diagonal2) < 0.1:
             return "Square"
         elif (abs(side_lengths[0] - side_lengths[2]) < 0.1 and
-              abs(side_lengths[1] - side_lengths[3]) < 0.1):
+              abs(side_lengths[1] - side_lengths[3]) < 0.1 and
+              abs(diagonal1 - diagonal2) < 0.1):
             return "Rectangle"
         else:
             return "Polygon with 4 vertices"
@@ -232,12 +241,11 @@ def calculate_rotation_angle(rotated_vertices, type_shape):
 
 
     angle_degrees = np.degrees(angle)
+    #print(type_shape)
     #print(angle_degrees)
     # Convert angle to degrees and adjust according to shape
     rotation_angle = angle_degrees % angles_dict[type_shape]
-
-    if angle_degrees > angles_dict[type_shape]:
-        rotation_angle -= angles_dict[type_shape]
+    #print(rotation_angle)
 
     return rotation_angle
 
@@ -272,11 +280,11 @@ def plane_intersect(a, b):
 
 
 def main() -> None:
-    mapname = "aaaaaaaaamap"
+    mapname = "1square"
     #mapname = "test_webots_wall"
     pcd_filename = f"point_clouds/{mapname}.npy"
     #shapes_filename = "worlds/custom_maps/zmap_test_4_shapes.pkl"
-    csv_points = f"worlds/custom_maps/{mapname}_points.csv"
+    #csv_points = f"worlds/custom_maps/{mapname}_points.csv"
     output_csv = f"results/comparison_results_{mapname}.csv"
     ground_truths = pd.read_csv(f"ground_truth/{mapname}_shapes.csv")
 
@@ -287,92 +295,9 @@ def main() -> None:
     point_cloud.points = o3d.utility.Vector3dVector(data_arr)
     o3d.visualization.draw_plotly([point_cloud])
 
-    source_points_df = pd.read_csv(csv_points, header=None, names=['x', 'y'])
-    source_points = source_points_df[['x', 'y']].to_numpy()
-    """
-    planes = []
-    inliers_all = []
-    outliers_before = data_arr
-    for orientation in ["vertical"]:
-        #print(orientation)
-        inliers_plane = [0, 0, 0]
-        while len(inliers_plane) > 0:
-            plane = Plane()
-            total_points = len(outliers_before)
-            min_points = 1000
-            print(f"min_points: {min_points}")
-            equation, inliers_plane_ids = plane.fit(outliers_before, 0.05, minPoints=min_points, maxIteration=50000,
-                                                orientation=orientation)
+    #source_points_df = pd.read_csv(csv_points, header=None, names=['x', 'y'])
+    #source_points = source_points_df[['x', 'y']].to_numpy()
 
-            if len(inliers_plane) <= 0:
-                break
-            #breakpoint()
-            #outliers_plane = np.array([point for point in outliers_before if point not in inliers_plane])
-            #outliers_full = np.array([point for point in data_arr if point not in inliers_plane])
-
-            #outliers_before = outliers_plane
-            #planes.append((equation, inliers_plane))
-            #inliers_all.extend(inliers_plane)
-
-            # --------
-
-            all_indices = np.arange(outliers_before.shape[0])
-            outliers_plane_indices = np.setdiff1d(all_indices, inliers_plane_ids)
-            outliers_plane = outliers_before[outliers_plane_indices]
-
-            inliers_plane = outliers_before[inliers_plane_ids]
-            inliers_all.extend(inliers_plane)
-            outliers_before = outliers_plane
-
-            #point_cloud = o3d.geometry.PointCloud()
-            #point_cloud.points = o3d.utility.Vector3dVector(outliers_plane)
-            #o3d.visualization.draw_plotly([point_cloud])
-
-            if len(equation) > 0:
-                planes.append((equation, inliers_plane))
-            print(f"len planes -> {len(planes)}, n points left -> {len(outliers_before)}")
-    #breakpoint()
-    z = np.max(data_arr[:, 2])
-
-    intersection_points = []
-    intersection_edges = []
-    for a in range(len(planes)):
-        for b in range(a, len(planes)):
-            read = 0
-            plane_a = planes[a]
-            plane_b = planes[b]
-            if plane_a != plane_b:
-                point_a, point_b = plane_intersect(plane_a[0], plane_b[0])
-                x, y = point_a[0], point_a[1]
-                for point in plane_a[1]:
-                    x2, y2 = point[0], point[1]
-                    if np.sqrt((x - x2) ** 2 + (y - y2) ** 2) < 0.2:
-                        read += 1
-                        break
-                for point in plane_b[1]:
-                    x2, y2 = point[0], point[1]
-                    if np.sqrt((x - x2) ** 2 + (y - y2) ** 2) < 0.2:
-                        read += 1
-                        break
-                if read == 2:
-                    intersection_point = np.array([x, y, z])
-                    intersection_points.append(intersection_point)
-                    intersection_edges.append((a, b))
-
-    edges = []
-    for plane_idx, plane in enumerate(planes):
-        plane_eq = plane[0]
-        edge_points = []
-        for point_idx, point in enumerate(intersection_points):
-            dist = (plane_eq[0] * point[0] + plane_eq[1] * point[1] + plane_eq[2] * point[2] + plane_eq[3]) / np.sqrt(
-                plane_eq[0] ** 2 + plane_eq[1] ** 2 + plane_eq[2] ** 2)
-            if np.abs(dist) <= 0.0001:
-                edge_points.append(point_idx)
-        if len(edge_points) == 2:
-            edges.append(edge_points)
-    intersection_points = np.array(intersection_points)
-    intersection_edges = edges
-    """
     #breakpoint()
     planes, intersection_points, intersection_edges, inliers_all = Ransac(data_arr,
                                                                           min_points=1000,
@@ -397,8 +322,9 @@ def main() -> None:
 
     orientation_angles = []
     detected_shapes = []
+    #print(selected_points)
     for points, center in zip(selected_points, cycle_centers):
-        flat_points = [[point[0] / 1000, point[1] / 1000] for point in points]
+        flat_points = [[point[0], point[1]] for point in points]
         classification = classify_shape(flat_points, center[:2])
         print(classification)
 
@@ -407,7 +333,7 @@ def main() -> None:
             shape_key = 'draw_triangle'
         elif classification == "Square" or classification == "Rectangle" or classification == "Polygon with 4 vertices":
             shape_key = 'draw_square'
-        elif classification == "Regular Pentagon" or classification == "Polygon with 5 vertices":
+        elif classification == "Pentagon" or classification == "Regular Pentagon" or classification == "Polygon with 5 vertices":
             shape_key = 'draw_pentagon'
         elif classification == "Plane":
             shape_key = 'draw_plane'
